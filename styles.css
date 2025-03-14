@@ -1,0 +1,50 @@
+@import "tailwindcss";
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer components {
+    .video-frame {
+      @apply h-[40vh] w-[90vw] md:h-[80vh] md:w-[40vw] my-2 bg-linear-to-br from-white to-gray-400 dark:from-gray-900 dark:to-gray-500 border-2 dark:border-gray-200 border-gray-400 rounded-2xl relative;
+    }
+    .video-icon {
+      @apply absolute inset-0  top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-25 animate-ping;
+    }
+  }
+
+@layer components {
+  .custom-button {
+    @apply bg-transparent text-black hover:bg-gray-500 dark:text-white font-semibold hover:text-white py-2 px-4 border border-gray-500 dark:border-white hover:border-transparent rounded-lg;
+  }
+}
+/* #videos{
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 2em;
+}
+
+.video-player{
+    background-color: black;
+    width: 100%;
+}
+
+#video-wrapper{
+    position: relative;
+}
+
+#waiting{
+    display: none;
+    position: absolute;
+    left: 0;
+    right: 0;
+    top: 0;
+    bottom: 0;
+    margin: auto;
+    width: 240px;
+    height: 40px;
+
+}
+
+#answer{
+    
+} */

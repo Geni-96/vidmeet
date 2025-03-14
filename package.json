@@ -1,0 +1,19 @@
+{
+  "name": "signalingpeerconnection",
+  "version": "1.0.0",
+  "description": "",
+  "main": "scripts.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "start": "node server.js"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "@tailwindcss/cli": "^4.0.14",
+    "express": "^4.18.2",
+    "socket.io": "^4.6.2",
+    "tailwindcss": "^4.0.14"
+  }
+}
