@@ -1,12 +1,10 @@
 const userName = Math.floor(Math.random() * 100000)
-const password = "x";
-document.querySelector('#user-name').innerHTML = userName;
-
+console.log(userName,'username')
 //if trying it on a phone, use this instead...
 // const socket = io.connect('https://LOCAL-DEV-IP-HERE:8181/',{
 const socket = io.connect('https://localhost:8181/',{
     auth: {
-        userName,password
+        userName
     }
 })
 

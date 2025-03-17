@@ -10,22 +10,20 @@
 <body>
     <div class="@container p-5 dark:bg-gray-800 h-screen">
         
-        <div class="grid grid-flow-row md:grid-flow-col gap-4 content-center my-4">
+        <div class="grid grid-flow-row md:grid-flow-col gap-4 place-items-center my-4">
             <div class="video-frame">
-                <img src="https://cdn3d.iconscout.com/3d/premium/thumb/video-call-sign-3d-icon-download-in-png-blend-fbx-gltf-file-formats--meeting-movie-camera-online-pack-jobs-carriers-icons-5818870.png" alt="Loading" id="video-icon" class="video-icon" />
+                <img src="./icon1.png" alt="Loading" id="video-icon" class="video-icon" />
                 <video class="w-full h-full object-cover" id="local-video" autoplay playsinline controls muted="muted"></video>
             </div>
             <div class="video-frame">
-                <img src="https://cdn3d.iconscout.com/3d/premium/thumb/video-call-sign-3d-icon-download-in-png-blend-fbx-gltf-file-formats--meeting-movie-camera-online-pack-jobs-carriers-icons-5818870.png" alt="Loading" id="video-icon" class="video-icon" />
+                <img src="./icon1.png" alt="Loading" id="video-icon" class="video-icon" />
                 <video class="w-full h-full object-cover" id="remote-video" autoplay playsinline controls></video>
             </div>
         </div>
-        <div id="user-name"></div>
-        <div id="waiting" class="btn btn-warning">Waiting for answer...</div>
-        <div class="flex content-center justify-center gap-2">
+        <div class="flex content-center justify-center gap-2 md:gap-6">
             <button id="call" class="custom-button">Join Call</button>
+            <button class="custom-button">Answer</button>
             <button id="hangup" class="custom-button">Hangup</button>
-            <div id="answer" class="col"></div>
         </div>
     </div>
 </body>

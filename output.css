@@ -17,7 +17,6 @@
     --font-weight-semibold: 600;
     --radius-lg: 0.5rem;
     --radius-2xl: 1rem;
-    --animate-ping: ping 1s cubic-bezier(0, 0, 0.2, 1) infinite;
     --default-font-family: var(--font-sans);
     --default-font-feature-settings: var(--font-sans--font-feature-settings);
     --default-font-variation-settings: var(
@@ -204,6 +203,9 @@
   .grid-flow-row {
     grid-auto-flow: row;
   }
+  .place-items-center {
+    place-items: center;
+  }
   .content-center {
     align-content: center;
   }
@@ -239,6 +241,7 @@
     margin-block: calc(var(--spacing) * 2);
     height: 40vh;
     width: 90vw;
+    overflow: hidden;
     border-radius: var(--radius-2xl);
     border-style: var(--tw-border-style);
     border-width: 2px;
@@ -277,7 +280,6 @@
     translate: var(--tw-translate-x) var(--tw-translate-y);
     --tw-translate-y: calc(calc(1/2 * 100%) * -1);
     translate: var(--tw-translate-x) var(--tw-translate-y);
-    animation: var(--animate-ping);
   }
 }
 @layer components {
@@ -380,12 +382,6 @@
 @property --tw-font-weight {
   syntax: "*";
   inherits: false;
-}
-@keyframes ping {
-  75%, 100% {
-    transform: scale(2);
-    opacity: 0;
-  }
 }
 html,body{
   height:100%;

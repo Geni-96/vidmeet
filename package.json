@@ -13,6 +13,7 @@
   "dependencies": {
     "@tailwindcss/cli": "^4.0.14",
     "express": "^4.18.2",
+    "redis": "^4.7.0",
     "socket.io": "^4.6.2",
     "tailwindcss": "^4.0.14"
   }

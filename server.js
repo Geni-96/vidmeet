@@ -1,13 +1,34 @@
-const http = require('http')
+const https = require('https')
 const express = require('express');
 const app = express();
 const socketio = require('socket.io');
+const redis = require('redis');
 app.use(express.static(__dirname))
+const fs = require('fs');
 
-
+const key = fs.readFileSync('cert.key');
+const cert = fs.readFileSync('cert.crt');
+const client = redis.createClient({
+    username: 'default',
+    password: 'h67EQ4nSQDV6pXiLWuITXK93jtRCQgza',
+    socket: {
+        host: 'redis-14254.c275.us-east-1-4.ec2.redns.redis-cloud.com',
+        port: 14254
+    }
+ });
+ 
+ 
+ client.on('error', err => console.log('Redis Client Error', err));
+ 
+ 
+ (async () => {
+    await client.connect();
+    console.log('Connected to Redis');
+ })();
+ 
 //we changed our express setup so we can use https
 //pass the key and cert to createServer on https
-const expressServer = http.createServer(app);
+const expressServer = https.createServer({key, cert},app);
 //create our socket.io server... it will listen to our express port
 const io = socketio(expressServer,{
     cors: {
@@ -18,7 +39,9 @@ const io = socketio(expressServer,{
         methods: ["GET", "POST"]
     }
 });
-expressServer.listen(8181);
+expressServer.listen(8181, () => {
+    console.log('Server is running on port 8181');
+});
 
 //offers will contain {}
 const offers = [
@@ -33,27 +56,26 @@ const connectedSockets = [
     //username, socketId
 ]
 
-io.on('connection',(socket)=>{
-    // console.log("Someone has connected");
+io.on('connection',async(socket)=>{
+    console.log("Someone has connected");
     const userName = socket.handshake.auth.userName;
-    const password = socket.handshake.auth.password;
 
-    if(password !== "x"){
-        socket.disconnect(true);
-        return;
-    }
     connectedSockets.push({
         socketId: socket.id,
         userName
     })
-
+    await client.set('username', userName)
+    console.log('adding sockets data to redis')
+    await client.hSet(`sockets:${userName}`, 'socketId', socket.id);
+    // const sock = await client.hGetAll("connectedSockets")
+    // console.log(sock)
     //a new client has joined. If there are any offers available,
     //emit them out
     if(offers.length){
         socket.emit('availableOffers',offers);
     }
     
-    socket.on('newOffer',newOffer=>{
+    socket.on('newOffer',async (newOffer)=>{
         offers.push({
             offererUserName: userName,
             offer: newOffer,
@@ -62,8 +84,18 @@ io.on('connection',(socket)=>{
             answer: null,
             answererIceCandidates: []
         })
-        // console.log(newOffer.sdp.slice(50))
+        console.log(newOffer.type)
         //send out to all connected sockets EXCEPT the caller
+        const result = await client.json.set(`${userName}`, '$', {
+            offererUserName: userName,
+            offer: newOffer,
+            offerIceCandidates: [],
+            answererUserName: null,
+            answer: null,
+            answererIceCandidates: []
+        });
+        console.log('Document stored:', result);
+                
         socket.broadcast.emit('newOfferAwaiting',offers.slice(-1))
     })
 
@@ -93,11 +125,14 @@ io.on('connection',(socket)=>{
         socket.to(socketIdToAnswer).emit('answerResponse',offerToUpdate)
     })
 
-    socket.on('sendIceCandidateToSignalingServer',iceCandidateObj=>{
+    socket.on('sendIceCandidateToSignalingServer',async(iceCandidateObj)=>{
         const { didIOffer, iceUserName, iceCandidate } = iceCandidateObj;
         // console.log(iceCandidate);
+        
         if(didIOffer){
             //this ice is coming from the offerer. Send to the answerer
+            await client.json.arrAppend(`${userName}`, '$.offerIceCandidates', iceCandidate);
+            console.log('ICE Candidate added to redis:', iceCandidate);
             const offerInOffers = offers.find(o=>o.offererUserName === iceUserName);
             if(offerInOffers){
                 offerInOffers.offerIceCandidates.push(iceCandidate)
