@@ -9,7 +9,7 @@
 </head>
 <body>
     <div class="@container p-5 dark:bg-gray-800 h-screen">
-        
+        <div id="clipboard"></div>
         <div class="grid grid-flow-row md:grid-flow-col gap-4 place-items-center my-4">
             <div class="video-frame">
                 <img src="./icon1.png" alt="Loading" id="video-icon" class="video-icon" />
@@ -21,9 +21,14 @@
             </div>
         </div>
         <div class="flex content-center justify-center gap-2 md:gap-6">
-            <button id="call" class="custom-button">Join Call</button>
-            <button class="custom-button">Answer</button>
+            <button id="call" class="custom-button">Create Call</button>
+            <button id="answer-button" class="custom-button">Answer</button>
             <button id="hangup" class="custom-button">Hangup</button>
+            <div id="answerSection" class="hidden">
+                <input type="text" id="offererUsername" placeholder="Enter Offerer's Username">
+                <button id="submitBtn" class="custom-button">Submit</button>
+                <button id="cancelBtn" class="custom-button">Cancel</button>
+            </div>
         </div>
     </div>
 </body>

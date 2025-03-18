@@ -43,6 +43,14 @@ const call = async e=>{
         peerConnection.setLocalDescription(offer);
         didIOffer = true;
         socket.emit('newOffer',offer); //send offer to signalingServer
+        const clipboardEle = document.querySelector('#clipboard')
+        clipboardEle.innerHTML(`<img src="./clipboard-icon.png" alt="meeting-link" ></img>`)
+        clipboardEle.addEventListener('click',()=>{
+            navigator.clipboard.writeText(userName);
+
+            // Alert the copied text
+            alert("Copied the meeting link!");
+        })
     }catch(err){
         console.log(err)
     }
@@ -59,6 +67,7 @@ const answerOffer = async(offerObj)=>{
     // console.log(peerConnection.signalingState) //should be have-local-pranswer because CLIENT2 has set its local desc to it's answer (but it won't be)
     //add the answer to the offerObj so the server knows which offer this is related to
     offerObj.answer = answer 
+    offerObj.answererUserName = userName
     //emit the answer to the signaling server, so it can emit to CLIENT1
     //expect a response from the server with the already existing ICE candidates
     const offerIceCandidates = await socket.emitWithAck('newAnswer',offerObj)
