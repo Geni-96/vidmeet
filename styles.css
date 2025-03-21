@@ -5,7 +5,7 @@
 
 @layer components {
     .video-frame {
-      @apply h-[40vh] w-[90vw] md:h-[80vh] md:w-[40vw] my-2 bg-linear-to-br from-white to-gray-400 dark:from-gray-900 dark:to-gray-500 border-2 dark:border-gray-200 border-gray-400 rounded-2xl overflow-hidden relative;
+      @apply h-[40vh] w-[80vw] md:h-[80vh] md:w-[48vw] bg-linear-to-br from-white to-gray-400 dark:from-gray-900 dark:to-gray-500 border-2 dark:border-gray-200 border-gray-400 rounded-2xl overflow-hidden relative;
     }
     .video-icon {
       @apply absolute inset-0  top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-25;

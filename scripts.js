@@ -1,4 +1,6 @@
 const userName = Math.floor(Math.random() * 100000)
+let isAudioMuted = false
+let isVideoOn = true
 console.log(userName,'username')
 //if trying it on a phone, use this instead...
 // const socket = io.connect('https://LOCAL-DEV-IP-HERE:8181/',{
@@ -39,22 +41,42 @@ const call = async e=>{
     try{
         console.log("Creating offer...")
         const offer = await peerConnection.createOffer();
-        console.log(offer);
-        peerConnection.setLocalDescription(offer);
-        didIOffer = true;
-        socket.emit('newOffer',offer); //send offer to signalingServer
-        const clipboardEle = document.querySelector('#clipboard')
-        clipboardEle.innerHTML(`<img src="./clipboard-icon.png" alt="meeting-link" ></img>`)
-        clipboardEle.addEventListener('click',()=>{
-            navigator.clipboard.writeText(userName);
+        if(offer){
+            peerConnection.setLocalDescription(offer);
+            didIOffer = true;
+            socket.emit('newOffer',offer)
 
-            // Alert the copied text
-            alert("Copied the meeting link!");
-        })
+            document.querySelector('#call').classList.add('hidden')
+            document.querySelector('#answer-button').classList.add('hidden')
+            let clipboardEle = document.querySelector('#clipboard')
+            clipboardEle.classList.remove('hidden')
+            clipboardEle.addEventListener('click',async()=>{
+                try{
+                    const defaultMessage = document.getElementById("default-message");
+                    const successMessage = document.getElementById("success-message");
+                    const windowObject = window.location.href
+                    await navigator.clipboard.writeText(`${windowObject}?offererUserName=${userName}`);
+                    // show the success message
+                    defaultMessage.classList.add("hidden");
+                    successMessage.classList.remove("hidden");
+
+                    // Optionally, reset the success message after a few seconds (for example, 2 seconds)
+                    setTimeout(function() {
+                        defaultMessage.classList.remove("hidden");
+                        successMessage.classList.add("hidden");
+                    }, 2000);
+                    setTimeout(function(){
+                        clipboardEle.classList.add('hidden')
+                    },2000)
+                }catch(err){
+                    console.log('an error occured',err)
+                    alert(`Failed to copy meeting link. You can still join using this ID:${userName}`)
+                }
+            });
+        }
     }catch(err){
-        console.log(err)
+        console.error(err)
     }
-
 }
 
 const answerOffer = async(offerObj)=>{
@@ -82,7 +104,10 @@ const addAnswer = async(offerObj)=>{
     //addAnswer is called in socketListeners when an answerResponse is emitted.
     //at this point, the offer and answer have been exchanged!
     //now CLIENT1 needs to set the remote
-    document.getElementsByTagName("img")[1].classList.add("hidden");
+    document.getElementById('remote-icon').classList.add("hidden");
+    document.getElementById('videocam-icon').classList.remove("hidden")
+    document.getElementById('microphone-icon').classList.remove("hidden")
+    document.getElementById("hangup").classList.remove("hidden")
     await peerConnection.setRemoteDescription(offerObj.answer)
     // console.log(peerConnection.signalingState)
 }
@@ -106,7 +131,7 @@ const fetchUserMedia = ()=>{
                     volume: 1.0,
                     },
             });
-            document.getElementsByTagName("img")[0].classList.add("hidden");
+            document.getElementById('local-icon').classList.add("hidden");
             localVideoEl.srcObject = stream;
             localStream = stream;    
             resolve();    
@@ -151,7 +176,7 @@ const createPeerConnection = (offerObj)=>{
         
         peerConnection.addEventListener('track',e=>{
             console.log("Got a track from the other peer!! How excting")
-            console.log(e)
+            // console.log(e)
             e.streams[0].getTracks().forEach(track=>{
                 remoteStream.addTrack(track,remoteStream);
                 console.log("Here's an exciting moment... fingers cross")
@@ -161,7 +186,14 @@ const createPeerConnection = (offerObj)=>{
         if(offerObj){
             //this won't be set when called from call();
             //will be set when we call from answerOffer()
-            // console.log(peerConnection.signalingState) //should be stable because no setDesc has been run yet
+            console.log('setting remote description') //should be stable because no setDesc has been run yet
+            document.getElementById('remote-icon').classList.add("hidden");
+            document.getElementById("hangup").classList.remove("hidden")
+            document.getElementById('videocam-icon').classList.remove("hidden")
+            document.getElementById('microphone-icon').classList.remove("hidden")
+            document.getElementById('answer-button').classList.add("hidden")
+            document.getElementById("loading-overlay").classList.add("hidden")
+            document.getElementById("main-content").classList.remove("blur-xl") 
             await peerConnection.setRemoteDescription(offerObj.offer)
             // console.log(peerConnection.signalingState) //should be have-remote-offer, because client2 has setRemoteDesc on the offer
         }
@@ -172,7 +204,69 @@ const createPeerConnection = (offerObj)=>{
 const addNewIceCandidate = iceCandidate=>{
     peerConnection.addIceCandidate(iceCandidate)
     console.log("======Added Ice Candidate======")
+    
 }
 
 
 document.querySelector('#call').addEventListener('click',call)
+//mute functionality
+const micImage = document.getElementById("mic-image")
+const vidImage = document.getElementById("vid-image")
+document.getElementById('microphone-icon').addEventListener('click',async()=>{
+    isAudioMuted = !isAudioMuted
+    if (isAudioMuted) {
+        localStream.getAudioTracks()[0].enabled = false;
+        micImage.src = "./icons/mute-24.png"
+        console.log("Audio muted.");
+      }
+    else {
+        localStream.getAudioTracks()[0].enabled=true
+        micImage.src = "./icons/mic-24.png"
+        console.log("Audio unmuted.");
+      }
+})
+document.getElementById('videocam-icon').addEventListener('click',async()=>{
+    isVideoOn = !isVideoOn
+    if (isVideoOn) {
+        localStream.getVideoTracks()[0].enabled=true
+        vidImage.src="./icons/video-24.png"
+        console.log("Video on.");
+      }
+    else {
+        localStream.getVideoTracks()[0].enabled=false
+        vidImage.src="./icons/no-video-24.png"
+        console.log("Video off.");
+      }
+})
+
+document.getElementById('hangup').addEventListener('click',()=>{
+    socket.emit('endCall',userName)
+    cleanupCall()
+})
+
+socket.on('endCall', (userName) => {
+    console.log(`${userName} ended the call.`);
+    cleanupCall();
+});
+
+// Shared cleanup function
+function cleanupCall() {
+    // Stop local media
+    if (localStream) {
+        localStream.getTracks().forEach(track => track.stop());
+        localStream = null;
+    }
+
+    // Clear video elements
+    localVideoEl.srcObject = null;
+    remoteVideoEl.srcObject = null;
+
+    // Close peer connection
+    if (peerConnection) {
+        peerConnection.close();
+        peerConnection = null;
+    }
+    document.getElementById("main-content").classList.add('hidden')
+    document.getElementById("thankyou").classList.remove('hidden')
+    // Optionally update UI (show "Call ended", buttons, etc.)
+}

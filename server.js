@@ -56,7 +56,7 @@ let offers = [
 let offerer;
 
 io.on('connection',async(socket)=>{
-    console.log("Someone has connected");
+    console.log("Someone has connected", socket.id);
     const userName = socket.handshake.auth.userName;
 
     await client.set('username', userName)
@@ -85,15 +85,22 @@ io.on('connection',async(socket)=>{
             answer: null,
             answererIceCandidates: []
         });
-        console.log('Document stored:', result);
+        console.log('Document stored:', result)
                 
         socket.broadcast.emit('newOfferAwaiting',offers.slice(-1))
     })
 
-    socket.on('newAnswerer', async(offererUserName)=>{
-        offerer = offererUserName
-        const availableOffer = await client.json.get(`offer:${offererUserName}`)
-        socket.emit('availableOffer', availableOffer)
+    socket.on('newAnswerer', async(offererUserName, callback)=>{
+        try{
+            offerer = offererUserName
+            callback('Received your message');
+            const availableOffer = await client.json.get(`offer:${offererUserName}`)
+            console.log('emiting avaialbe offers with timeout')
+            socket.emit('availableOffer', availableOffer)
+        }
+        catch(err){
+            console.error('Error emiting avialble offers',err)
+        }
     })
     socket.on('newAnswer',async(offerObj,ackFunction)=>{
         // console.log(offerObj, 'offer obj on new answer');
@@ -147,5 +154,18 @@ io.on('connection',async(socket)=>{
         }
         // console.log(offers)
     })
-
+    socket.on('endCall', async (userName) => {
+        socket.broadcast.emit('endCall', userName);
+        try {
+            if (userName === offerer) {
+                await client.json.del(`offer:${offerer}`);
+                await client.del(`sockets:${offerer}`);
+            } else {
+                await client.del(`sockets:${userName}`);
+            }
+        } catch (error) {
+            console.error('Error in endCall:', error);
+        }
+    });
+    
 })

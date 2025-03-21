@@ -4,6 +4,26 @@ const answerSection = document.querySelector('#answerSection')
 const answerBtn = document.querySelector('#answer-button')
 const cancelBtn = document.querySelector('#cancelBtn')
 const submitBtn = document.querySelector('#submitBtn')
+
+let offererUserName;
+window.addEventListener('DOMContentLoaded', () => {
+    offererUserName = new URLSearchParams(window.location.search).get('offererUserName');    
+}) 
+socket.on('connect', () => {
+    if (offererUserName) {
+        document.getElementById("loading-overlay").classList.remove("hidden") 
+        document.getElementById("main-content").classList.add("blur-xl")       
+        console.log('Emitting new answerer with query param:', offererUserName, socket.id);
+        setTimeout(() => {
+            console.log('Emitting newAnswerer after 10 seconds');
+            socket.emit('newAnswerer', offererUserName, (response) => {
+                console.log('Server acknowledged:', response);
+                createCallBtn.classList.add('hidden');
+                answerBtn.classList.add('hidden');
+            });
+        }, 5000);
+    }
+}); 
 answerBtn.addEventListener('click',()=>{
     createCallBtn.classList.add('hidden');
     answerBtn.classList.add('hidden');
@@ -19,13 +39,17 @@ cancelBtn.addEventListener('click', () => {
 
 document.getElementById('submitBtn').addEventListener('click', async() => {
     // console.log('submit button clicked')
-const offererUsername = document.getElementById('offererUsername').value;
-// console.log(offererUsername,'offerer username')
-if (offererUsername) {
-    socket.emit('newAnswerer', offererUsername)
-} else {
-    alert('Please enter the offerer\'s username.');
-}
+    offererUserName = document.getElementById('offererUsername').value;
+    // console.log(offererUsername,'offerer username')
+    if (offererUserName) {
+        console.log('emiting new answerer')
+        socket.emit('newAnswerer', offererUserName, (response)=>{
+            console.log('Server acknowledged:', response);
+            answerSection.classList.add('hidden');
+        })
+    } else {
+        alert('Please enter the offerer\'s username.');
+    }
 });
 
 socket.on('availableOffer', (offerObj)=> {
