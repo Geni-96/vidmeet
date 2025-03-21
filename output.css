@@ -18,6 +18,7 @@
     --color-blue-600: oklch(0.546 0.245 262.881);
     --color-blue-700: oklch(0.488 0.243 264.376);
     --color-gray-50: oklch(0.985 0.002 247.839);
+    --color-gray-100: oklch(0.967 0.003 264.542);
     --color-gray-200: oklch(0.928 0.006 264.531);
     --color-gray-300: oklch(0.872 0.01 258.338);
     --color-gray-400: oklch(0.707 0.022 261.325);
@@ -31,10 +32,10 @@
     --spacing: 0.25rem;
     --text-sm: 0.875rem;
     --text-sm--line-height: calc(1.25 / 0.875);
+    --text-3xl: 1.875rem;
+    --text-3xl--line-height: calc(2.25 / 1.875);
     --text-5xl: 3rem;
     --text-5xl--line-height: 1;
-    --text-7xl: 4.5rem;
-    --text-7xl--line-height: 1;
     --font-weight-medium: 500;
     --font-weight-semibold: 600;
     --tracking-tight: -0.025em;
@@ -329,8 +330,8 @@
   .bg-gray-50 {
     background-color: var(--color-gray-50);
   }
-  .bg-gray-800\/10 {
-    background-color: color-mix(in oklab, var(--color-gray-800) 10%, transparent);
+  .bg-gray-100\/10 {
+    background-color: color-mix(in oklab, var(--color-gray-100) 10%, transparent);
   }
   .bg-red-700 {
     background-color: var(--color-red-700);
@@ -388,9 +389,9 @@
   .text-center {
     text-align: center;
   }
-  .text-5xl {
-    font-size: var(--text-5xl);
-    line-height: var(--tw-leading, var(--text-5xl--line-height));
+  .text-3xl {
+    font-size: var(--text-3xl);
+    line-height: var(--tw-leading, var(--text-3xl--line-height));
   }
   .text-sm {
     font-size: var(--text-sm);
@@ -492,12 +493,6 @@
       outline-style: none;
     }
   }
-  .sm\:text-7xl {
-    @media (width >= 40rem) {
-      font-size: var(--text-7xl);
-      line-height: var(--tw-leading, var(--text-7xl--line-height));
-    }
-  }
   .md\:grid-flow-col {
     @media (width >= 48rem) {
       grid-auto-flow: column;
@@ -506,6 +501,12 @@
   .md\:gap-6 {
     @media (width >= 48rem) {
       gap: calc(var(--spacing) * 6);
+    }
+  }
+  .md\:text-5xl {
+    @media (width >= 48rem) {
+      font-size: var(--text-5xl);
+      line-height: var(--tw-leading, var(--text-5xl--line-height));
     }
   }
   .lg\:gap-10 {
@@ -536,6 +537,11 @@
   .dark\:bg-red-600 {
     @media (prefers-color-scheme: dark) {
       background-color: var(--color-red-600);
+    }
+  }
+  .dark\:bg-white {
+    @media (prefers-color-scheme: dark) {
+      background-color: var(--color-white);
     }
   }
   .dark\:text-blue-500 {
@@ -842,7 +848,6 @@
     transform: rotate(360deg);
   }
 }
-
 html,body{
   height:100%;
 }
