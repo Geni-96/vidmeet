@@ -2,6 +2,8 @@ const userName = Math.floor(Math.random() * 100000)
 let isAudioMuted = false
 let isVideoOn = true
 console.log(userName,'username')
+let mediaRecorderLocal;
+let mediaRecorderRemote;
 //if trying it on a phone, use this instead...
 // const socket = io.connect('https://LOCAL-DEV-IP-HERE:8181/',{
 const socket = io.connect('https://localhost:8181/',{
@@ -12,7 +14,7 @@ const socket = io.connect('https://localhost:8181/',{
 
 const localVideoEl = document.querySelector('#local-video');
 const remoteVideoEl = document.querySelector('#remote-video');
-
+const clipboardEle = document.querySelector('#clipboard')
 
 let localStream; //a var to hold the local video stream
 let remoteStream; //a var to hold the remote video stream
@@ -48,7 +50,7 @@ const call = async e=>{
 
             document.querySelector('#call').classList.add('hidden')
             document.querySelector('#answer-button').classList.add('hidden')
-            let clipboardEle = document.querySelector('#clipboard')
+            
             clipboardEle.classList.remove('hidden')
             clipboardEle.addEventListener('click',async()=>{
                 try{
@@ -65,9 +67,7 @@ const call = async e=>{
                         defaultMessage.classList.remove("hidden");
                         successMessage.classList.add("hidden");
                     }, 2000);
-                    setTimeout(function(){
-                        clipboardEle.classList.add('hidden')
-                    },2000)
+                    
                 }catch(err){
                     console.log('an error occured',err)
                     alert(`Failed to copy meeting link. You can still join using this ID:${userName}`)
@@ -108,6 +108,7 @@ const addAnswer = async(offerObj)=>{
     document.getElementById('videocam-icon').classList.remove("hidden")
     document.getElementById('microphone-icon').classList.remove("hidden")
     document.getElementById("hangup").classList.remove("hidden")
+    clipboardEle.classList.add("hidden")
     await peerConnection.setRemoteDescription(offerObj.answer)
     // console.log(peerConnection.signalingState)
 }
@@ -133,7 +134,8 @@ const fetchUserMedia = ()=>{
             });
             document.getElementById('local-icon').classList.add("hidden");
             localVideoEl.srcObject = stream;
-            localStream = stream;    
+            localStream = stream;  
+              
             resolve();    
         }catch(err){
             console.log(err);
@@ -164,7 +166,7 @@ const createPeerConnection = (offerObj)=>{
 
         peerConnection.addEventListener('icecandidate',e=>{
             console.log('........Ice candidate found!......')
-            console.log(e)
+            // console.log(e)
             if(e.candidate){
                 socket.emit('sendIceCandidateToSignalingServer',{
                     iceCandidate: e.candidate,
@@ -195,6 +197,21 @@ const createPeerConnection = (offerObj)=>{
             document.getElementById("loading-overlay").classList.add("hidden")
             document.getElementById("main-content").classList.remove("blur-xl") 
             await peerConnection.setRemoteDescription(offerObj.offer)
+            const audioOnlyStream = new MediaStream(localStream.getAudioTracks());
+            mediaRecorderLocal = new MediaRecorder(audioOnlyStream, { mimeType: 'audio/webm' });
+            try{
+                mediaRecorderLocal.start(1000); // Start recording with 1-second chunks
+                console.log("recording audio")
+                mediaRecorderLocal.ondataavailable = (event) => {
+                    const audioChunk = event.data; // Blob object containing the audio data
+                    // Process the audioChunk (e.g., send to server)
+                    console.log('Received audio chunk:', audioChunk);
+                    socket.emit("audioChunks",audioChunk)
+                };
+            }catch(err){
+                console.error('failed to start audio recorder',err)
+            }
+            
             // console.log(peerConnection.signalingState) //should be have-remote-offer, because client2 has setRemoteDesc on the offer
         }
         resolve();
@@ -261,12 +278,15 @@ function cleanupCall() {
     localVideoEl.srcObject = null;
     remoteVideoEl.srcObject = null;
 
+    document.getElementById("main-content").classList.add('hidden')
+    document.getElementById("thankyou").classList.remove('hidden')
+    // Optionally update UI (show "Call ended", buttons, etc.)
     // Close peer connection
     if (peerConnection) {
         peerConnection.close();
         peerConnection = null;
+        mediaRecorder.stop()
     }
-    document.getElementById("main-content").classList.add('hidden')
-    document.getElementById("thankyou").classList.remove('hidden')
-    // Optionally update UI (show "Call ended", buttons, etc.)
+    
 }
+

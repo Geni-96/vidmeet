@@ -41,14 +41,14 @@
             </button>
             <button id="answer-button" class="custom-button">Join Call</button>
             <button id="videocam-icon" class="hidden bg-white-400 border border-gray-400 rounded-full dark:bg-white dark:border-gray-600">
-                <img id="vid-image" src="https://img.icons8.com/?size=24&id=PcUVqvF3yrks&format=png&color=000000" alt="stop-video" class="p-3">
+                <img id="vid-image" src="./icons/video-24.png" alt="stop-video" class="p-3">
                 </img>
             </button>
             <button id="hangup" class="text-white bg-red-700 hover:bg-red-800 focus:outline-none focus:ring-4 focus:ring-red-300 font-medium rounded-full text-sm py-4 px-8 text-center dark:bg-red-600 dark:hover:bg-red-700 dark:focus:ring-red-900 hidden">End Call</button>
             <button id="microphone-icon" class="hidden bg-white-400 border border-gray-400 rounded-full dark:bg-white dark:border-gray-600">
                 <img id="mic-image" src="./icons/mic-24.png" alt="mute" class="p-3"></img>
             </button>
-            <div id="answerSection flex items-center justify-center" class="hidden">
+            <div id="answerSection" class="hidden flex items-center justify-center gap-2 md:gap-6">
                 <input type="text" id="offererUsername" class="shadow-xs bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-1/2 p-2.5 dark:bg-gray-700 dark:border-gray-600 dark:placeholder-gray-400 dark:text-white dark:focus:ring-blue-500 dark:focus:border-blue-500 dark:shadow-xs-light" placeholder="Enter ID">
                 <button id="submitBtn" class="custom-button">Submit</button>
                 <button id="cancelBtn" class="custom-button">Cancel</button>
@@ -61,11 +61,11 @@
             <span class="sr-only">Loading...</span>
         </div>
     </div>
-    <div id="thankyou" class="hidden fixed inset-0 flex items-center justify-center bg-radial-[at_50%_75%] from-sky-50 via-blue-100 to-cyan-50 to-90% z-50">
-        <div role="status" class="absolute -translate-x-1/2 -translate-y-1/2 top-2/4 left-1/2">
-              <h1 class="text-3xl md:text-5xl lg:7xl font-semibold tracking-tight text-balance text-gray-800">Thank you</h1>
-          </div>
-      </div>
+    <div id="thankyou" class="hidden fixed inset-0 bg-gradient-to-br from-indigo-100 from-40% via-white via-50% to-sky-100 to-70% flex items-center justify-center z-50">
+        <div role="status" class="absolute -translate-x-1/2 -translate-y-1/2 top-2/4 left-1/2 text-3xl md:text-5xl lg:7xl font-semibold">
+            Thank you
+        </div>
+    </div>
 </body>
 <script src="/socket.io/socket.io.js"></script>
 <script src='scripts.js'></script>

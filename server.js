@@ -5,6 +5,10 @@ const socketio = require('socket.io');
 const redis = require('redis');
 app.use(express.static(__dirname))
 const fs = require('fs');
+require('dotenv').config();
+// const express = require('express');
+// const multer = require('multer');
+const axios = require('axios');
 
 const key = fs.readFileSync('cert.key');
 const cert = fs.readFileSync('cert.crt');
@@ -168,4 +172,26 @@ io.on('connection',async(socket)=>{
         }
     });
     
+    //processing audio chunks
+    socket.on("audioChunks",audioChunk =>{
+        console.log('received audio chunk from frontend')
+        axios.post(
+            'https://ai.bluehive.com/api/consume-audio',
+            {
+            audioChunk
+            },
+            {
+            headers: {
+                'Authorization': `Bearer ${process.env.OZWELL_SECRET}`,
+                'Content-Type': 'audio/webm;codecs=opus'
+            }
+            }
+        )
+        .then(response => {
+            console.log(response.data);
+        })
+        .catch(error => {
+            console.error(error);
+        });
+    })
 })
