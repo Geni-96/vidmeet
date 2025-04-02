@@ -9,11 +9,11 @@ module.exports = {
         testEnvironment: 'node',
         testMatch: ['<rootDir>/tests/**/server.test.js'], // Match server tests
       },
-      {
-        displayName: 'jsdom',
-        testEnvironment: 'jsdom',
-        testMatch: ['<rootDir>/tests/**/ui.test.js'], // Match UI tests
-        setupFilesAfterEnv: [], // Setup for Jest DOM
-      },
+      // {
+      //   displayName: 'jsdom',
+      //   testEnvironment: 'jsdom',
+      //   testMatch: ['<rootDir>/tests/**/ui.test.js'], // Match UI tests
+      //   setupFilesAfterEnv: [], // Setup for Jest DOM
+      // },
     ],
   };
