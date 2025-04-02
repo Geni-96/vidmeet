@@ -14,10 +14,10 @@ const key = fs.readFileSync('cert.key');
 const cert = fs.readFileSync('cert.crt');
 const client = redis.createClient({
     username: 'default',
-    password: 'h67EQ4nSQDV6pXiLWuITXK93jtRCQgza',
+    password: process.env.REDIS_PASSWORD,
     socket: {
-        host: 'redis-14254.c275.us-east-1-4.ec2.redns.redis-cloud.com',
-        port: 14254
+        host: process.env.REDIS_HOST,
+        port: process.env.REDIS_PORT
     }
  });
  
@@ -173,25 +173,25 @@ io.on('connection',async(socket)=>{
     });
     
     //processing audio chunks
-    socket.on("audioChunks",audioChunk =>{
-        console.log('received audio chunk from frontend')
-        axios.post(
-            'https://ai.bluehive.com/api/consume-audio',
-            {
-            audioChunk
-            },
-            {
-            headers: {
-                'Authorization': `Bearer ${process.env.OZWELL_SECRET}`,
-                'Content-Type': 'audio/webm;codecs=opus'
-            }
-            }
-        )
-        .then(response => {
-            console.log(response.data);
-        })
-        .catch(error => {
-            console.error(error);
-        });
-    })
+    // socket.on("audioChunks",audioChunk =>{
+    //     console.log('received audio chunk from frontend')
+    //     axios.post(
+    //         'https://ai.bluehive.com/api/consume-audio',
+    //         {
+    //         audioChunk
+    //         },
+    //         {
+    //         headers: {
+    //             'Authorization': `Bearer ${process.env.OZWELL_SECRET}`,
+    //             'Content-Type': 'audio/webm;codecs=opus'
+    //         }
+    //         }
+    //     )
+    //     .then(response => {
+    //         console.log(response.data);
+    //     })
+    //     .catch(error => {
+    //         console.error(error);
+    //     });
+    // })
 })

@@ -1,1 +1,14 @@
 node_modules
+.env
+ca.crt
+ca.key
+cert.crt
+cert.key
+icon1.png
+icon2.png
+icon40.png
+icon64.png
+icons8-user-default-40.png
+package-lock.json
+video-icon1.jpeg
+video-icon2.jpeg
