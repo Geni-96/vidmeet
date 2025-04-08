@@ -5,12 +5,12 @@ https://github.com/user-attachments/assets/7d44de62-dcef-41e6-8eb8-1cadffa9703f
 
 
 ### 🚀 Features
-🔗 Create and share call links
-🔐 Join existing calls using a call ID
-🧠 Multi-call support (handled via Redis)
-🎙️ Mute/Unmute audio
-📷 Start/Stop video
-📴 Hang up to end call and clear session
+- 🔗 Create and share call links
+- 🔐 Join existing calls using a call ID
+- 🧠 Multi-call support (handled via Redis)
+- 🎙️ Mute/Unmute audio
+- 📷 Start/Stop video
+- 📴 Hang up to end call and clear session
 
 ### 🛠️ Tech Stack
 
@@ -20,7 +20,7 @@ https://github.com/user-attachments/assets/7d44de62-dcef-41e6-8eb8-1cadffa9703f
 - Redis – Temporary session data storage for multiple call handling
 
 ### 🧰 Installation
-- git clone https://github.com/Geni-96/vidmeet.git
+- [git clone https://github.com/Geni-96/vidmeet.git](https://github.com/Geni-96/vidmeet.git)
 - cd into the app
 - npm install
 - npm start
