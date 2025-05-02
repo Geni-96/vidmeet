@@ -11,13 +11,12 @@
   "author": "",
   "license": "ISC",
   "dependencies": {
-    "@tailwindcss/cli": "^4.0.14",
+    
     "axios": "^1.8.4",
     "dotenv": "^16.4.7",
     "express": "^4.18.2",
     "redis": "^4.7.0",
-    "socket.io": "^4.6.2",
-    "tailwindcss": "^4.0.14"
+    "socket.io": "^4.6.2"
   },
   "devDependencies": {
     "@testing-library/dom": "^10.4.0",
@@ -29,6 +28,8 @@
     "jsdom": "^26.0.0",
     "msw": "^2.7.3",
     "socket.io-client": "^4.8.1",
-    "supertest": "^7.1.0"
+    "supertest": "^7.1.0",
+    "@tailwindcss/cli": "^4.0.14",
+    "tailwindcss": "^4.0.14"
   }
 }
