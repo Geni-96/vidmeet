@@ -6,9 +6,12 @@ const redis = require('redis');
 app.use(express.static(__dirname))
 const fs = require('fs');
 require('dotenv').config();
+let sessionId = "Jjwjg6gouWLXhMGKW";
 // const express = require('express');
 // const multer = require('multer');
+// for sending audio chunks to ozwell
 const axios = require('axios');
+const FormData = require('form-data');
 
 const key = fs.readFileSync('cert.key');
 const cert = fs.readFileSync('cert.crt');
@@ -68,8 +71,6 @@ io.on('connection',async(socket)=>{
     await client.hSet(`sockets:${userName}`, 'socketId', socket.id);
 
     //a new client has joined. If there are any offers available, emit them out
-    
-    
     socket.on('newOffer',async (newOffer)=>{
         offers.push({
             offererUserName: userName,
@@ -173,25 +174,30 @@ io.on('connection',async(socket)=>{
     });
     
     //processing audio chunks
-    // socket.on("audioChunks",audioChunk =>{
-    //     console.log('received audio chunk from frontend')
-    //     axios.post(
-    //         'https://ai.bluehive.com/api/consume-audio',
-    //         {
-    //         audioChunk
-    //         },
-    //         {
-    //         headers: {
-    //             'Authorization': `Bearer ${process.env.OZWELL_SECRET}`,
-    //             'Content-Type': 'audio/webm;codecs=opus'
-    //         }
-    //         }
-    //     )
-    //     .then(response => {
-    //         console.log(response.data);
-    //     })
-    //     .catch(error => {
-    //         console.error(error);
-    //     });
-    // })
+    socket.on("audioChunks", async(audioChunk)=>{
+        const formData = new FormData();
+        // console.log('received audio chunk from frontend')
+        formData.append('index', Date.now()); // Example timestamp
+        formData.append('clientSecret', process.env.OZWELL_SECRET)
+        formData.append('type','audio/webm;codecs=opus')
+        formData.append('sessionId', sessionId);
+        formData.append('data', audioChunk) //audio chunk received here is an array buffer.
+        try{
+            const response = await axios.post(
+            'https://ai.bluehive.com/api/consume-audio',
+            formData,
+            {
+            timeout: 60000,
+            timeoutErrorMessage: '60 second timeout sending audio chunk to Bluehive AI, check your internet connection and try again.',
+            headers: {
+                'x-bluehive-authorization': 'FBoYfOkX35nT1Uv3XAinrIPbYGBzZGYQPQc2BUjC8lY',
+                ...formData.getHeaders()
+                },
+            })
+            console.log(response.data);
+            sessionId = response.data.sessionId;
+        }catch(err){
+            console.error('Error sending audio chunks to ozwell', err)
+        }
+    })
 })

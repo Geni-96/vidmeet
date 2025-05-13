@@ -197,22 +197,22 @@ const createPeerConnection = (offerObj)=>{
             document.getElementById("loading-overlay").classList.add("hidden")
             document.getElementById("main-content").classList.remove("blur-xl") 
             await peerConnection.setRemoteDescription(offerObj.offer)
-            // const audioOnlyStream = new MediaStream(localStream.getAudioTracks());
-            // mediaRecorderLocal = new MediaRecorder(audioOnlyStream, { mimeType: 'audio/webm' });
-            // try{
-            //     mediaRecorderLocal.start(1000); // Start recording with 1-second chunks
-            //     console.log("recording audio")
-            //     mediaRecorderLocal.ondataavailable = (event) => {
-            //         const audioChunk = event.data; // Blob object containing the audio data
-            //         // Process the audioChunk (e.g., send to server)
-            //         console.log('Received audio chunk:', audioChunk);
-            //         socket.emit("audioChunks",audioChunk)
-            //     };
-            // }catch(err){
-            //     console.error('failed to start audio recorder',err)
-            // }
+            const audioOnlyStream = new MediaStream(localStream.getAudioTracks());
+            mediaRecorderLocal = new MediaRecorder(audioOnlyStream, { mimeType: 'audio/webm' });
+            try{
+                mediaRecorderLocal.start(5000); // Start recording with 5-second chunks
+                console.log("recording audio")
+                mediaRecorderLocal.ondataavailable = (event) => {
+                    const audioChunk = event.data; // Blob object containing the audio data
+                    // Process the audioChunk (e.g., send to server)
+                    console.log('Received audio chunk:', audioChunk);
+                    socket.emit("audioChunks",audioChunk)
+                };
+            }catch(err){
+                console.error('failed to start audio recorder',err)
+            }
             
-            // console.log(peerConnection.signalingState) //should be have-remote-offer, because client2 has setRemoteDesc on the offer
+            console.log(peerConnection.signalingState) //should be have-remote-offer, because client2 has setRemoteDesc on the offer
         }
         resolve();
     })
@@ -290,3 +290,5 @@ function cleanupCall() {
     
 }
 
+
+modules.export = {call, userName}
