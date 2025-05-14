@@ -1,21 +1,29 @@
-const https = require('https')
-const express = require('express');
-const app = express();
-const socketio = require('socket.io');
-const redis = require('redis');
-app.use(express.static(__dirname))
-const fs = require('fs');
-require('dotenv').config();
-let sessionId = "Jjwjg6gouWLXhMGKW";
-// const express = require('express');
-// const multer = require('multer');
-// for sending audio chunks to ozwell
-const axios = require('axios');
-const FormData = require('form-data');
+import https from 'https';
+import express from 'express';
+import { createClient } from 'redis';
+import fs from 'fs';
+import { fileURLToPath } from 'url';
+import { dirname, join } from 'path';
+import dotenv from 'dotenv';
+import axios from 'axios';
+import FormData from 'form-data';
+import { Server } from 'socket.io';
+import { connectToServer, chatLoop, cleanup } from './my_mcp_client.js';
+// Required for __dirname in ESM
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = dirname(__filename);
 
+dotenv.config();
+const app = express()
+app.use(express.static(__dirname));
+app.use(express.json());
+
+// SSL certs
 const key = fs.readFileSync('cert.key');
 const cert = fs.readFileSync('cert.crt');
-const client = redis.createClient({
+
+let sessionId = "Jjwjg6gouWLXhMGKW";
+const client = createClient({
     username: 'default',
     password: process.env.REDIS_PASSWORD,
     socket: {
@@ -23,8 +31,25 @@ const client = redis.createClient({
         port: process.env.REDIS_PORT
     }
  });
- 
- 
+
+ //handle voice commands
+
+app.post('/api/handle-command', async (req, res) => {
+  const { command } = req.body;
+
+  try {
+    await connectToServer('./my_mcp_server.js'); // Connect MCP client
+    const result = await chatLoop(command); // Pass command to LLM
+
+    res.json({ success: true, message: result });
+  } catch (err) {
+    console.error("Error:", err);
+    res.status(500).json({ success: false, message: "LLM call failed" });
+  }
+});
+
+
+
  client.on('error', err => console.log('Redis Client Error', err));
  
  
@@ -37,7 +62,7 @@ const client = redis.createClient({
 //pass the key and cert to createServer on https
 const expressServer = https.createServer({key, cert},app);
 //create our socket.io server... it will listen to our express port
-const io = socketio(expressServer,{
+const io = new Server(expressServer,{
     cors: {
         origin: [
             "https://localhost",
@@ -184,7 +209,7 @@ io.on('connection',async(socket)=>{
         formData.append('data', audioChunk) //audio chunk received here is an array buffer.
         try{
             const response = await axios.post(
-            'https://ai.bluehive.com/api/consume-audio',
+            'https://wreiske-ai.dev.bluehive.com/api/consume-audio',
             formData,
             {
             timeout: 60000,

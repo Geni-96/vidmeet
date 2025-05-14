@@ -1,5 +1,6 @@
 {
   "name": "signalingpeerconnection",
+  "type": "module",
   "version": "1.0.0",
   "description": "",
   "main": "scripts.js",
@@ -11,6 +12,7 @@
   "author": "",
   "license": "ISC",
   "dependencies": {
+    "@anthropic-ai/sdk": "^0.50.4",
     "@google-cloud/local-auth": "^2.1.0",
     "@modelcontextprotocol/sdk": "^1.11.2",
     "axios": "^1.8.4",

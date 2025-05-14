@@ -1,13 +1,8 @@
 import { Anthropic } from "@anthropic-ai/sdk";
-import {
-  MessageParam,
-  Tool,
-} from "@anthropic-ai/sdk/resources/messages/messages.mjs";
 import { Client } from "@modelcontextprotocol/sdk/client/index.js";
 import { StdioClientTransport } from "@modelcontextprotocol/sdk/client/stdio.js";
-import readline from "readline/promises";
-import dotenv from "dotenv";
 
+import dotenv from "dotenv";
 dotenv.config();
 
 const ANTHROPIC_API_KEY = process.env.ANTHROPIC_API_KEY;
@@ -112,26 +107,19 @@ async function processQuery(query) {
   return finalText.join("\n");
 }
 
-async function chatLoop() {
-  const rl = readline.createInterface({
-    input: process.stdin,
-    output: process.stdout,
-  });
-
+async function chatLoop(command) {
   try {
     console.log("\nMCP Client Started!");
-    console.log("Type your queries or 'quit' to exit.");
 
     while (true) {
-      const message = await rl.question("\nQuery: ");
-      if (message.toLowerCase() === "quit") {
+      if (command.toLowerCase() === "quit") {
         break;
       }
-      const response = await processQuery(message);
+      const response = await processQuery(command);
       console.log("\n" + response);
     }
-  } finally {
-    rl.close();
+  }catch(e){
+    console.error(e)
   }
 }
 
@@ -139,6 +127,5 @@ async function cleanup() {
   await mcp.close();
 }
 
-connectToServer("./my_mcp_server.js")
-chatLoop()
-cleanup()
+
+export {connectToServer, chatLoop, cleanup }

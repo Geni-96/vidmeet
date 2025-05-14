@@ -3,7 +3,7 @@ let isAudioMuted = false
 let isVideoOn = true
 console.log(userName,'username')
 let mediaRecorderLocal;
-let mediaRecorderRemote;
+
 //if trying it on a phone, use this instead...
 // const socket = io.connect('https://LOCAL-DEV-IP-HERE:8181/',{
 const socket = io.connect('https://localhost:8181/',{
@@ -226,6 +226,8 @@ const addNewIceCandidate = iceCandidate=>{
 
 
 document.querySelector('#call').addEventListener('click',call)
+//trigger from mcp
+socket.on("start_call", call)
 //mute functionality
 const micImage = document.getElementById("mic-image")
 const vidImage = document.getElementById("vid-image")
@@ -290,5 +292,50 @@ function cleanupCall() {
     
 }
 
+const recognition = new (window.SpeechRecognition || window.webkitSpeechRecognition)();
+recognition.lang = 'en-US';
+recognition.interimResults = false;
 
-modules.export = {call, userName}
+recognition.start();
+
+recognition.onresult = function(event) {
+    const transcript = event.results[0][0].transcript;
+
+    // Send to backend/LLM
+    processVoiceCommand(transcript)
+};
+
+recognition.onerror = function(event) {
+    console.error("Speech recognition error:", event.error);
+};
+
+async function processVoiceCommand(command) {
+  console.log(`Received voice command: "${command}"`);
+  
+  try {
+    const result = await fetch('/api/handle-command', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ command })
+    });
+    const data = await result.json();
+    console.log("LLM result:", data.message);
+    if (result.success) {
+      console.log('✓ Success:', data.message);
+      // You could trigger a voice response here
+      // speakResponse(`I've ${result.message.toLowerCase()}`);
+    } else {
+      console.log('✗ Failed:', data.message);
+      // You could trigger a voice response for failure
+      // speakResponse(`I couldn't process that. ${result.message}`);
+    }
+    
+    return data;
+  } catch (error) {
+    console.error('Error processing voice command:', error);
+    return {
+      success: false,
+      message: 'An error occurred while processing your request'
+    };
+  }
+}
