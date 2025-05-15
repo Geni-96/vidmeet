@@ -224,13 +224,13 @@ const addNewIceCandidate = iceCandidate=>{
     
 }
 
-
-document.querySelector('#call').addEventListener('click',call)
+const callBtn = document.querySelector('#call')
+callBtn.addEventListener('click',call)
 //trigger from mcp
 socket.on('start_call', () => {
   console.log('Received start_call event. Initiating WebRTC call...');
   // Your frontend WebRTC initiation logic here
-  call;
+  callBtn.click()
 });
 //mute functionality
 const micImage = document.getElementById("mic-image")

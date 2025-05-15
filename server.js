@@ -42,7 +42,7 @@ app.post('/api/startCall', (req,res)=>{
 })
 
 app.get('/api/link',()=>{
-    return {link: `https://localhost:8181${username}`};
+    return {link: `https://localhost:8181?offererUserName=${username}`};
 })
 app.post('/api/handle-command', async (req, res) => {
   const { command } = req.body;
@@ -115,7 +115,7 @@ io.on('connection',async(socket)=>{
     await client.set('username', userName)
     console.log('adding sockets data to redis')
     await client.hSet(`sockets:${userName}`, 'socketId', socket.id);
-
+    
     //a new client has joined. If there are any offers available, emit them out
     socket.on('newOffer',async (newOffer)=>{
         offers.push({
@@ -126,7 +126,7 @@ io.on('connection',async(socket)=>{
             answer: null,
             answererIceCandidates: []
         })
-        console.log(newOffer.type)
+        // console.log(newOffer.type)
         //send out to all connected sockets EXCEPT the caller
         const result = await client.json.set(`offer:${userName}`, '$', {
             offererUserName: userName,
@@ -136,7 +136,7 @@ io.on('connection',async(socket)=>{
             answer: null,
             answererIceCandidates: []
         });
-        console.log('Document stored:', result)
+        // console.log('Document stored:', result)
                 
         socket.broadcast.emit('newOfferAwaiting',offers.slice(-1))
     })

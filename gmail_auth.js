@@ -6,7 +6,7 @@ import { google } from 'googleapis';
 import { Base64 } from 'js-base64';
 
 // If modifying these scopes, delete token.json.
-const SCOPES = ['https://www.googleapis.com/auth/gmail.readonly', 'https://www.googleapis.com/auth/gmail.compose'];
+const SCOPES = ['https://www.googleapis.com/auth/gmail.compose'];
 // The file token.json stores the user's access and refresh tokens, and is
 // created automatically when the authorization flow completes for the first
 // time.
@@ -135,5 +135,6 @@ async function sendDraft(auth, draftId) {
     console.error("Error sending the invite: ",err)
   }
 }
+
 
 export { authorize, listLabels, createDraft, sendDraft };

@@ -4,6 +4,7 @@ import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js"
 import { authorize, listLabels, createDraft, sendDraft } from "./gmail_auth.js";
 const emailApiBaseUrl = 'https://localhost:8181/api';
 process.env.NODE_TLS_REJECT_UNAUTHORIZED = '0';
+
 // Create server instance
 const server = new McpServer({
   name: "contacts",
@@ -140,10 +141,9 @@ server.tool(
       type: "string",
       description: "The mailId from which the email should be sent",
     },
-    recipients: {
-      type: "array",
-      items: { type: "string", format: "email" },
-      description: "An array of recipient email addresses",
+    recipient: {
+      type: "string",
+      description: "The recipient email addresses",
     },
     subject: {
       type: "string",
@@ -154,16 +154,16 @@ server.tool(
       description: "The meeting link received from the api in the earlier tool call"
     }
   },
-  async ({ sender, recipients, subject, body }) => {
+  async ({ sender, recipient, subject, body }) => {
     try {
       const auth = await authorize(); // Authorize Gmail
 
-      const draft = await createDraft(auth, {
-        to: recipients.join(', '),
-        from: sender,
-        subject: subject,
-        body: body,
-      });
+      const draft = await createDraft(auth,
+        recipient,
+        sender,
+        subject,
+        body,
+      );
 
       const sendResult = await sendDraft(auth, draft.id);
 
@@ -172,7 +172,7 @@ server.tool(
           content: [
             {
               type: "text",
-              text: `Email invitation sent successfully to ${recipients.join(', ')}.`,
+              text: `Email invitation sent successfully to ${recipient}.`,
             },
           ],
         };
@@ -181,7 +181,7 @@ server.tool(
           content: [
             {
               type: "text",
-              text: `Failed to send email invitation to ${recipients.join(', ')}.`,
+              text: `Failed to send email invitation to ${recipient}.`,
             },
           ],
         };
