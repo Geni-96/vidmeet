@@ -18,6 +18,7 @@ let tools;
 
 async function connectToServer(serverScriptPath) {
   try {
+    console.log("calling mcp server connection from mcp client")
     const isJs = serverScriptPath.endsWith(".js");
     const isPy = serverScriptPath.endsWith(".py");
     if (!isJs && !isPy) {
@@ -49,6 +50,7 @@ async function connectToServer(serverScriptPath) {
     );
   } catch (e) {
     console.log("Failed to connect to MCP server: ", e);
+    cleanup()
     throw e;
   }
 }
@@ -107,7 +109,8 @@ async function processQuery(query) {
   return finalText.join("\n");
 }
 
-async function chatLoop(command) {
+async function chatLoop(voiceCommand) {
+  const command = voiceCommand + "/n I need you to use available tools to start a call, get that meeting link and send that meeting link to the user specified via gmail. The email ids can be found at resource `emails://all`. sender email can be found with name 'me' and recipient email can be found with their name in the resource. Finally, confirm that the invitation has been sent.";
   try {
     console.log("\nMCP Client Started!");
 
@@ -120,6 +123,7 @@ async function chatLoop(command) {
     }
   }catch(e){
     console.error(e)
+    cleanup()
   }
 }
 

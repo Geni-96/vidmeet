@@ -12,5 +12,6 @@ icons8-user-default-40.png
 package-lock.json
 video-icon1.jpeg
 video-icon2.jpeg
-*.rdbcredentials.json
+*.rdb
 token.json
+credentials.json

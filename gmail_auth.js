@@ -3,6 +3,7 @@ import path from 'path';
 import process from 'process';
 import { authenticate } from '@google-cloud/local-auth';
 import { google } from 'googleapis';
+import { Base64 } from 'js-base64';
 
 // If modifying these scopes, delete token.json.
 const SCOPES = ['https://www.googleapis.com/auth/gmail.readonly', 'https://www.googleapis.com/auth/gmail.compose'];
@@ -11,8 +12,6 @@ const SCOPES = ['https://www.googleapis.com/auth/gmail.readonly', 'https://www.g
 // time.
 const TOKEN_PATH = path.join(process.cwd(), 'token.json');
 const CREDENTIALS_PATH = path.join(process.cwd(), 'credentials.json');
-
-let gmail;
 
 /**
  * Reads previously authorized credentials from the save file.
@@ -73,7 +72,7 @@ async function authorize() {
  * @param {google.auth.OAuth2} auth An authorized OAuth2 client.
  */
 async function listLabels(auth) {
-  gmail = google.gmail({version: 'v1', auth});
+  const gmail = google.gmail({version: 'v1', auth});
   const res = await gmail.users.labels.list({
     userId: 'me',
   });
@@ -88,40 +87,40 @@ async function listLabels(auth) {
   });
 }
 
-async function createDraft(to, subject, body) {
-  try{
-        const rawMessage = [
-        `To: ${to}`,
-        "Content-Type: text/plain; charset=utf-8",
-        "MIME-Version: 1.0",
-        `Subject: ${subject}`,
-        "",
-        body,
-    ].join("\r\n");
+async function createDraft(auth, to, from, subject, body) {
+  const gmail = google.gmail({ version: 'v1', auth });
 
-    const encodedMessage = Buffer.from(rawMessage)
-        .toString("base64")
-        .replace(/\+/g, "-")
-        .replace(/\//g, "_")
-        .replace(/=+$/, "");
+  const rawMessage = [
+    `From: ${from}`,
+    `To: ${to}`,
+    `Subject: ${subject}`,
+    '',
+    body
+  ].join('\r\n');
 
+  const encodedMessage = Base64.encodeURI(rawMessage);
+
+  try {
     const res = await gmail.users.drafts.create({
-        userId: "me",
-        requestBody: {
+      userId: 'me',
+      requestBody: {
         message: {
-            raw: encodedMessage,
+          raw: encodedMessage,
         },
-        },
+      },
     });
 
-    console.log("Draft created:", res.data.id);
+    console.log(`Draft ID: ${res.data.id}`);
+    console.log('Draft Message:', res.data.message);
     return res.data;
-  }catch(err){
-    console.error('Error creating the draft: ',err)
+  } catch (err) {
+    console.error('An error occurred:', err);
+    return null;
   }
 }
 
-async function sendDraft(draftId) {
+async function sendDraft(auth, draftId) {
+  const gmail = google.gmail({ version: 'v1', auth });
   try{
     const res = await gmail.users.drafts.send({
         userId: "me",

@@ -12,6 +12,7 @@ import { connectToServer, chatLoop, cleanup } from './my_mcp_client.js';
 // Required for __dirname in ESM
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
+let username; 
 
 dotenv.config();
 const app = express()
@@ -34,11 +35,19 @@ const client = createClient({
 
  //handle voice commands
 
+app.post('/api/startCall', ()=>{
+    io.emit("start_call")
+})
+
+app.get('/api/username',()=>{
+    return {username: username};
+})
 app.post('/api/handle-command', async (req, res) => {
   const { command } = req.body;
-
+    console.log('received voice command from frontend')
   try {
     await connectToServer('./my_mcp_server.js'); // Connect MCP client
+    console.log("connected to mcp server")
     const result = await chatLoop(command); // Pass command to LLM
 
     res.json({ success: true, message: result });
@@ -75,6 +84,7 @@ expressServer.listen(8181, () => {
     console.log('Server is running on port 8181');
 });
 
+
 //offers will contain {}
 let offers = [
     // offererUserName
@@ -90,7 +100,7 @@ let offerer;
 io.on('connection',async(socket)=>{
     console.log("Someone has connected", socket.id);
     const userName = socket.handshake.auth.userName;
-
+    username = userName
     await client.set('username', userName)
     console.log('adding sockets data to redis')
     await client.hSet(`sockets:${userName}`, 'socketId', socket.id);
