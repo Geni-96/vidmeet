@@ -9,6 +9,7 @@ import axios from 'axios';
 import FormData from 'form-data';
 import { Server } from 'socket.io';
 import { connectToServer, chatLoop, cleanup } from './my_mcp_client.js';
+import contacts from "./test-emails.js";
 // Required for __dirname in ESM
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
@@ -35,12 +36,13 @@ const client = createClient({
 
  //handle voice commands
 
-app.post('/api/startCall', ()=>{
+app.post('/api/startCall', (req,res)=>{
     io.emit("start_call")
+    res.json({ success: true, message: 'emitting start call event' });
 })
 
-app.get('/api/username',()=>{
-    return {username: username};
+app.get('/api/link',()=>{
+    return {link: `https://localhost:8181${username}`};
 })
 app.post('/api/handle-command', async (req, res) => {
   const { command } = req.body;
@@ -57,7 +59,16 @@ app.post('/api/handle-command', async (req, res) => {
   }
 });
 
+app.get('/api/emails/:name', (req, res) => {
+  const nameParam = req.params.name.toLowerCase();
+  const contact = contacts.find(c => c.name.toLowerCase() === nameParam);
 
+  if (contact) {
+    res.json({ name: contact.name, email: contact.email });
+  } else {
+    res.status(404).json({ error: `Contact with name "${req.params.name}" not found.` });
+  }
+});
 
  client.on('error', err => console.log('Redis Client Error', err));
  
@@ -236,3 +247,4 @@ io.on('connection',async(socket)=>{
         }
     })
 })
+

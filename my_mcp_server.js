@@ -1,9 +1,9 @@
 // MCP Server Implementation (CommonJS)
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js"
-import contacts from "./test-emails.js";
 import { authorize, listLabels, createDraft, sendDraft } from "./gmail_auth.js";
-
+const emailApiBaseUrl = 'https://localhost:8181/api';
+process.env.NODE_TLS_REJECT_UNAUTHORIZED = '0';
 // Create server instance
 const server = new McpServer({
   name: "contacts",
@@ -14,88 +14,16 @@ const server = new McpServer({
   },
 });
 
-// Function to get meeting link
-async function getMeetingLink() {
-  console.log("sending meeting link to llm")
-  const link = `https://localhost:8181?offererUserName=${username}`;
-  return link;
-}
-
-// Helper function to send automatic email invites
-async function sendInvite(user) {
-  let found = false;
-  let myEmail;
-  let recipientEmail;
-  let sender;
-  let link;
-  
-  try {
-    // Get meeting link first
-    link = await getMeetingLink();
-    
-    // Search through contacts correctly
-    for (const contactId in contacts) {
-      const userObject = contacts[contactId];
-      if (userObject.name === user) {
-        found = true;
-        recipientEmail = userObject.email;
-      } else if (userObject.name === "me") {
-        myEmail = userObject.email;
-        sender = userObject.name;
-      }
-    }
-    
-    if (!found) {
-      console.error("User's contact not found");
-      return false;
-    } else {
-      // Send email to this user with the meeting link
-      try {
-        // Authenticate
-        await authorize().then(listLabels).catch(console.error);
-        
-        // Send invite
-        const subject = `${sender || 'Someone'} is inviting you to join a meeting`;
-        const draft = await createDraft(recipientEmail, subject, link);
-        const sendMail = await sendDraft(draft.id);
-        console.log(sendMail);
-        return true;
-      } catch (err) {
-        console.error('Error sending email', err);
-        cleanupAndExit()
-        return false;
-      }
-    }
-  } catch (err) {
-    console.error("Error inviting the user:", err);
-    cleanupAndExit()
-    return false;
-  }
-}
-
-
-server.resource(
-  "contact-emails", // A name for this resource type
-  "emails://all",    // A URI to access all emails
-  async (uri) => ({
-    contents: [
-      {
-        uri: uri.href,
-        json: contacts, // Serve the data as JSON
-      },
-    ],
-  })
-);
 
 // Register the start_call tool
-server.tool("start_call", 
+server.tool("start-call", 
   "Start a meeting with a given user",
   {
     name: { type: "string", description: "The name or identifier of the person to be invited to meeting" },
   },
   async ({name}) => {
     try{
-      const response = await fetch('/api/startCall', {
+      const response = await fetch(`${emailApiBaseUrl}/startCall`, {
         method: 'POST', // Or PUT, depending on your API
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ status: 'starting your meeting' }), // Example data
@@ -111,7 +39,7 @@ server.tool("start_call",
           ],
         };
       }
-      const link = await fetch('/api/username', {
+      const {link} = await fetch(`${emailApiBaseUrl}/link`, {
         method: 'GET',
         headers: {'Content-Type': 'application/json'}
       })
@@ -147,29 +75,35 @@ server.tool("start_call",
 });
 
 server.tool(
-  "get_contact_email",
-  "Fetch the contact email for a given name",
+  "get-email-of-sender-and-recipient",
+  "Get's the contact emails for the sender and recipient from api",
   {
-    name: { type: "string", description: "The name of the contact to retrieve the email for" },
+    name: { type: "string", description: "The name or identifier of the person to be invited to meeting" },
   },
-  async ({ name }, client) => {
+  async ({name='Jenny'}) => {
     try {
-      const response = await client.fetchResource(`emails://${name}`);
-      if (response?.contents?.[0]?.json?.email) {
+      const response = await fetch(`${emailApiBaseUrl}/emails/${encodeURIComponent(name)}`);
+      const result = await fetch(`${emailApiBaseUrl}/emails/${encodeURIComponent('me')}`);
+      if (!response.ok || ! result.ok) {
+        const errorData = await response.json();
         return {
           content: [
             {
               type: "text",
-              text: `The email for ${name} is: ${response.contents[0].json.email}`,
+              text: `Error fetching contact emails: ${errorData.error || response.statusText}`,
             },
           ],
         };
-      } else if (response?.contents?.[0]?.text) {
+      }
+
+      const contactData = await response.json();
+      const sender = await result.json()
+      if (contactData?.email && sender.email) {
         return {
           content: [
             {
               type: "text",
-              text: response.contents[0].text,
+              text: `The email for ${contactData.name} is: ${contactData.email}. The sender email is ${sender.email}`,
             },
           ],
         };
@@ -178,7 +112,7 @@ server.tool(
           content: [
             {
               type: "text",
-              text: `Could not find contact information for ${name}.`,
+              text: `Could not retrieve emails.`,
             },
           ],
         };
@@ -189,7 +123,7 @@ server.tool(
         content: [
           {
             type: "text",
-            text: `Failed to fetch contact email for ${name}.`,
+            text: `Failed to fetch contact email: ${error.message}`,
           },
         ],
       };
@@ -199,7 +133,7 @@ server.tool(
 
 
 server.tool(
-  "send_email_invite",
+  "send-email-invite",
   "Send an email invitation for a meeting",
   {
     sender: {
@@ -217,8 +151,8 @@ server.tool(
     },
     body: {
       type: "string",
-      description: "The body of the email invitation, including the meeting link",
-    },
+      description: "The meeting link received from the api in the earlier tool call"
+    }
   },
   async ({ sender, recipients, subject, body }) => {
     try {

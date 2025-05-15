@@ -110,7 +110,7 @@ async function processQuery(query) {
 }
 
 async function chatLoop(voiceCommand) {
-  const command = voiceCommand + "/n I need you to use available tools to start a call, get that meeting link and send that meeting link to the user specified via gmail. The email ids can be found at resource `emails://all`. sender email can be found with name 'me' and recipient email can be found with their name in the resource. Finally, confirm that the invitation has been sent.";
+  const command = voiceCommand + "/n I need you to use available tools to start a call with the name specified. This name will be the parameter for tool calls - start-call and get-email-of-sender-and-recipient. The call itself will be started by my app. You don't need to worry about which meeting platform to use. Just get that meeting link which you will receive in the start-call tool call. And send that meeting link to the user specified via gmail. The email ids for sender and recipient can be fetched from api as well. Finally, confirm that the invitation has been sent.";
   try {
     console.log("\nMCP Client Started!");
 

@@ -227,7 +227,11 @@ const addNewIceCandidate = iceCandidate=>{
 
 document.querySelector('#call').addEventListener('click',call)
 //trigger from mcp
-socket.on("start_call", call)
+socket.on('start_call', () => {
+  console.log('Received start_call event. Initiating WebRTC call...');
+  // Your frontend WebRTC initiation logic here
+  call;
+});
 //mute functionality
 const micImage = document.getElementById("mic-image")
 const vidImage = document.getElementById("vid-image")
@@ -303,11 +307,17 @@ recognition.onresult = function(event) {
 
     // Send to backend/LLM
     processVoiceCommand(transcript)
+    
 };
 
 recognition.onerror = function(event) {
     console.error("Speech recognition error:", event.error);
 };
+
+recognition.onaudioend = function(e){
+    recognition.stop()
+    console.log("audio input ended")
+}
 
 async function processVoiceCommand(command) {
   console.log(`Received voice command: "${command}"`);
