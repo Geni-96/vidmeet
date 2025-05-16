@@ -15,3 +15,5 @@ video-icon2.jpeg
 *.rdb
 token.json
 credentials.json
+test-emails.js
+
