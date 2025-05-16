@@ -24,11 +24,19 @@ server.tool("start-call",
   },
   async ({name}) => {
     try{
+      // Set timeout for fetch requests
+      const controller = new AbortController();
+      const timeout = setTimeout(() => controller.abort(), 5000); // 5 second timeout
+
       const response = await fetch(`${emailApiBaseUrl}/startCall`, {
-        method: 'POST', // Or PUT, depending on your API
+        method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ status: 'starting your meeting' }), // Example data
+        body: JSON.stringify({ status: 'starting your meeting' }),
+        signal: controller.signal
       });
+
+      clearTimeout(timeout);
+      
       const result = await response.json();
       if(!result){
         return {
@@ -40,10 +48,20 @@ server.tool("start-call",
           ],
         };
       }
-      const {link} = await fetch(`${emailApiBaseUrl}/link`, {
+
+      // Set new timeout for second fetch
+      const linkController = new AbortController();
+      const linkTimeout = setTimeout(() => linkController.abort(), 5000);
+
+      const linkResponse = await fetch(`${emailApiBaseUrl}/link`, {
         method: 'GET',
-        headers: {'Content-Type': 'application/json'}
-      })
+        headers: {'Content-Type': 'application/json'},
+        signal: linkController.signal
+      });
+
+      clearTimeout(linkTimeout);
+      
+      const {link} = await linkResponse.json();
       if(!link){
         return {
           content: [
@@ -54,6 +72,7 @@ server.tool("start-call",
           ],
         };
       }
+
       return {
         content: [
           {
@@ -63,6 +82,16 @@ server.tool("start-call",
         ],
       }
     } catch(error){
+      if (error.name === 'AbortError') {
+        return {
+          content: [
+            {
+              type: "text",
+              text: `Request timed out while trying to start meeting with ${name}.`,
+            },
+          ],
+        };
+      }
       console.error("Error initiating your call:", error);
       return {
         content: [

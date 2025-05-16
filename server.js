@@ -38,11 +38,11 @@ const client = createClient({
 
 app.post('/api/startCall', (req,res)=>{
     io.emit("start_call")
-    res.json({ success: true, message: 'emitting start call event' });
+    res.json({ success: true, message: 'Call successfully started. You can now fetch the link to join the call.' });
 })
 
-app.get('/api/link',()=>{
-    return {link: `https://localhost:8181?offererUserName=${username}`};
+app.get('/api/link',(req,res)=>{
+    res.json({ success: true, link: `https://localhost:8181?offererUserName=${username}`});
 })
 app.post('/api/handle-command', async (req, res) => {
   const { command } = req.body;
