@@ -13,3 +13,5 @@ package-lock.json
 video-icon1.jpeg
 video-icon2.jpeg
 *.rdb
+credentials.json
+token.json
