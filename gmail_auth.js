@@ -10,8 +10,8 @@ const SCOPES = ['https://www.googleapis.com/auth/gmail.compose'];
 // The file token.json stores the user's access and refresh tokens, and is
 // created automatically when the authorization flow completes for the first
 // time.
-const TOKEN_PATH = path.join(process.cwd(), 'token.json');
-const CREDENTIALS_PATH = path.join(process.cwd(), 'credentials.json');
+const TOKEN_PATH = path.join(process.cwd(), './token.json');
+const CREDENTIALS_PATH = path.join(process.cwd(), './credentials.json');
 
 /**
  * Reads previously authorized credentials from the save file.
@@ -89,7 +89,7 @@ async function listLabels(auth) {
 
 async function createDraft(auth, to, from, subject, body) {
   const gmail = google.gmail({ version: 'v1', auth });
-
+  console.log(auth,to,from,subject, body)
   const rawMessage = [
     `From: ${from}`,
     `To: ${to}`,
@@ -111,28 +111,28 @@ async function createDraft(auth, to, from, subject, body) {
     });
 
     console.log(`Draft ID: ${res.data.id}`);
-    console.log('Draft Message:', res.data.message);
     return res.data;
   } catch (err) {
-    console.error('An error occurred:', err);
-    return null;
+    console.error('An error occurred:', err.response?.data || err.message);
+    throw new Error('createDraft failed: ' + err.message);
   }
 }
 
 async function sendDraft(auth, draftId) {
   const gmail = google.gmail({ version: 'v1', auth });
-  try{
+  try {
     const res = await gmail.users.drafts.send({
-        userId: "me",
-        requestBody: {
+      userId: 'me',
+      requestBody: {
         id: draftId,
-        },
+      },
     });
 
     console.log("Draft sent. Message ID:", res.data.id);
     return res.data;
-  }catch(err){
-    console.error("Error sending the invite: ",err)
+  } catch (err) {
+    console.error("Failed to send draft:", err);
+    throw new Error('sendDraft failed: ' + err.message);
   }
 }
 
