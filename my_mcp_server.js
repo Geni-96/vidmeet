@@ -6,13 +6,155 @@ import express from "express";
 import { randomUUID } from "node:crypto";
 import { StreamableHTTPServerTransport } from "@modelcontextprotocol/sdk/server/streamableHttp.js";
 import { isInitializeRequest } from "@modelcontextprotocol/sdk/types.js"
+import zod from "zod";
 
 const app = express();
 app.use(express.json());
 
 // Map to store transports by session IDcan you start a call using #start-call and then once you have the meeting link from this tool call, use the tool #get-email-of-sender-and-recipient to get emails of "Jenny" and "me" to send automatic email using tool #send-email-invite with "Jenny" as recepient and "me" as sender?
 const transports= {};
-let server;
+const server = new McpServer({
+  name: "geni-mcp-server",
+  version: "1.0.0"
+});
+
+// Register the start_call tool
+server.tool(
+  "start-call-and-send-email-invite",
+  "Starts a meeting and sends an email invite",
+  {
+    person: zod.string().describe("Name of the person to call"), 
+  },
+  async ({person}) => {
+    console.log("Starting a call with", person);
+    try {
+      if (!person) {
+        return {
+          content: [
+            {
+              type: "text",
+              text: "Please provide a name to start a call.",
+            },
+          ],
+        };
+      }
+
+      // Start the meeting
+      const response = await fetch(`${emailApiBaseUrl}/startCall`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ status: 'starting your meeting' }),
+      });
+      
+      const result = await response.json();
+      if (!result) {
+        return {
+          content: [
+            {
+              type: "text",
+              text: "Failed to initiate a call.",
+            },
+          ],
+        };
+      }
+
+      // Get meeting link
+      const linkResponse = await fetch(`${emailApiBaseUrl}/link`, {
+        method: 'GET',
+        headers: {'Content-Type': 'application/json'},
+      });
+
+      const {link} = await linkResponse.json();
+      if (!link) {
+        return {
+          content: [
+            {
+              type: "text",
+              text: "Failed to create your meeting link.",
+            },
+          ],
+        };
+      }
+
+      // Get recipient and sender emails
+      const recipientEmail = await fetch(`${emailApiBaseUrl}/emails/${encodeURIComponent(person)}`);
+      const senderEmail = await fetch(`${emailApiBaseUrl}/emails/${encodeURIComponent('me')}`);
+      
+      if (!recipientEmail.ok || !senderEmail.ok) {
+        const errorData = await recipientEmail.json();
+        return {
+          content: [
+            {
+              type: "text",
+              text: `Error fetching contact emails: ${errorData.error || recipientEmail.statusText}`,
+            },
+          ],
+        };
+      }
+
+      const recipient = await recipientEmail.json();
+      const sender = await senderEmail.json();
+      
+      if (!recipient?.email || !sender?.email) {
+        return {
+          content: [
+            {
+              type: "text",
+              text: `Could not retrieve email for ${person}. Please check the contact name.`,
+            },
+          ],
+        };
+      } 
+
+      // Create and send email invitation
+      const auth = await authorize(); // Authorize Gmail
+      
+      const draft = await createDraft(auth,
+        recipient.email,
+        sender.email,
+        "Invitation to join a meeting",
+        link,
+      );
+      
+      console.log("draft created successfully", draft);
+      
+      const sendResult = await sendDraft(auth, draft.id);
+      console.log("send result for the draft", sendResult);
+      
+      if (!sendResult?.id) {
+        return {
+          content: [
+            {
+              type: "text",
+              text: `Error sending email invitation: ${sendResult.error || sendResult.statusText}`,
+            },
+          ],
+        };
+      }
+
+      // SUCCESS - Return confirmation
+      return {
+        content: [
+          {
+            type: "text",
+            text: `Successfully started meeting with ${person} and sent email invitation to ${recipient.email}. Meeting link: ${link}`,
+          },
+        ],
+      };
+
+    } catch (error) {
+      console.error("Error initiating your call:", error);
+      return {
+        content: [
+          {
+            type: "text",
+            text: `Failed to start meeting with ${person} and send invitation. Error: ${error.message}`,
+          },
+        ],
+      };
+    }
+  }
+);
 
 const emailApiBaseUrl = 'https://localhost:8181/api';
 process.env.NODE_TLS_REJECT_UNAUTHORIZED = '0';
@@ -53,152 +195,6 @@ app.post('/mcp', async (req, res) => {
         delete transports[transport.sessionId];
       }
     };
-    server = new McpServer({
-      name: "geni-mcp-server",
-      version: "1.0.0"
-    });
-
-    // Register the start_call tool
-    server.tool(
-      "start-call-and-send-email-invite",
-      "Starts a meeting and sends an email invite",
-      {
-        name: {
-            type: "string",
-            description: "The full name of the contact whose email address you need to retrieve.",
-        },
-      },
-      async ({name}) => {
-        console.log("Starting a call with", name);
-        try {
-          if (!name) {
-            return {
-              content: [
-                {
-                  type: "text",
-                  text: "Please provide a name to start a call.",
-                },
-              ],
-            };
-          }
-    
-          // Start the meeting
-          const response = await fetch(`${emailApiBaseUrl}/startCall`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ status: 'starting your meeting' }),
-          });
-          
-          const result = await response.json();
-          if (!result) {
-            return {
-              content: [
-                {
-                  type: "text",
-                  text: "Failed to initiate a call.",
-                },
-              ],
-            };
-          }
-    
-          // Get meeting link
-          const linkResponse = await fetch(`${emailApiBaseUrl}/link`, {
-            method: 'GET',
-            headers: {'Content-Type': 'application/json'},
-          });
-    
-          const {link} = await linkResponse.json();
-          if (!link) {
-            return {
-              content: [
-                {
-                  type: "text",
-                  text: "Failed to create your meeting link.",
-                },
-              ],
-            };
-          }
-    
-          // Get recipient and sender emails
-          const recipientEmail = await fetch(`${emailApiBaseUrl}/emails/${encodeURIComponent(name)}`);
-          const senderEmail = await fetch(`${emailApiBaseUrl}/emails/${encodeURIComponent('me')}`);
-          
-          if (!recipientEmail.ok || !senderEmail.ok) {
-            const errorData = await recipientEmail.json();
-            return {
-              content: [
-                {
-                  type: "text",
-                  text: `Error fetching contact emails: ${errorData.error || recipientEmail.statusText}`,
-                },
-              ],
-            };
-          }
-    
-          const recipient = await recipientEmail.json();
-          const sender = await senderEmail.json();
-          
-          if (!recipient?.email || !sender?.email) {
-            return {
-              content: [
-                {
-                  type: "text",
-                  text: `Could not retrieve email for ${name}. Please check the contact name.`,
-                },
-              ],
-            };
-          } 
-    
-          // Create and send email invitation
-          const auth = await authorize(); // Authorize Gmail
-          
-          const draft = await createDraft(auth,
-            recipient.email,
-            sender.email,
-            "Invitation to join a meeting",
-            link,
-          );
-          
-          console.log("draft created successfully", draft);
-          
-          const sendResult = await sendDraft(auth, draft.id);
-          console.log("send result for the draft", sendResult);
-          
-          if (!sendResult?.id) {
-            return {
-              content: [
-                {
-                  type: "text",
-                  text: `Error sending email invitation: ${sendResult.error || sendResult.statusText}`,
-                },
-              ],
-            };
-          }
-    
-          // SUCCESS - Return confirmation
-          return {
-            content: [
-              {
-                type: "text",
-                text: `Successfully started meeting with ${name} and sent email invitation to ${recipient.email}. Meeting link: ${link}`,
-              },
-            ],
-          };
-    
-        } catch (error) {
-          console.error("Error initiating your call:", error);
-          return {
-            content: [
-              {
-                type: "text",
-                text: `Failed to start meeting with ${name} and send invitation. Error: ${error.message}`,
-              },
-            ],
-          };
-        }
-      }
-    );
-
 
     // Connect to the MCP server
     await server.connect(transport);
