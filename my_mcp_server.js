@@ -1,53 +1,43 @@
 // MCP Server Implementation (CommonJS)
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
-import { authorize, listLabels, createDraft, sendDraft } from "./gmail_auth.js";
 // Start the server
 import express from "express";
 import { randomUUID } from "node:crypto";
 import { StreamableHTTPServerTransport } from "@modelcontextprotocol/sdk/server/streamableHttp.js";
 import { isInitializeRequest } from "@modelcontextprotocol/sdk/types.js"
+import { authorize, createDraft, sendDraft } from "./gmail_auth.js"; // Import the Gmail functions
 import zod from "zod";
-
 const app = express();
 app.use(express.json());
 
 // Map to store transports by session IDcan you start a call using #start-call and then once you have the meeting link from this tool call, use the tool #get-email-of-sender-and-recipient to get emails of "Jenny" and "me" to send automatic email using tool #send-email-invite with "Jenny" as recepient and "me" as sender?
 const transports= {};
+
+const webrtcApiBaseUrl = 'https://localhost:8181/api';
+const emailApiBaseUrl = 'http://localhost:4001';
+process.env.NODE_TLS_REJECT_UNAUTHORIZED = '0';
+
 const server = new McpServer({
   name: "geni-mcp-server",
   version: "1.0.0"
 });
 
 // Register the start_call tool
-server.tool(
-  "start-call-and-send-email-invite",
-  "Starts a meeting and sends an email invite",
+server.tool("start-call", 
+  "Start a meeting with a given user",
   {
-    person: zod.string().describe("Name of the person to call"), 
+    person: zod.string().describe("The name or identifier of the person to be invited to meeting"),
   },
   async ({person}) => {
-    console.log("Starting a call with", person);
-    try {
-      if (!person) {
-        return {
-          content: [
-            {
-              type: "text",
-              text: "Please provide a name to start a call.",
-            },
-          ],
-        };
-      }
-
-      // Start the meeting
-      const response = await fetch(`${emailApiBaseUrl}/startCall`, {
+    try{
+      const response = await fetch(`${webrtcApiBaseUrl}/startCall`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ status: 'starting your meeting' }),
       });
       
       const result = await response.json();
-      if (!result) {
+      if(!result){
         return {
           content: [
             {
@@ -58,14 +48,15 @@ server.tool(
         };
       }
 
-      // Get meeting link
-      const linkResponse = await fetch(`${emailApiBaseUrl}/link`, {
+
+      const linkResponse = await fetch(`${webrtcApiBaseUrl}/link`, {
         method: 'GET',
         headers: {'Content-Type': 'application/json'},
       });
 
+      
       const {link} = await linkResponse.json();
-      if (!link) {
+      if(!link){
         return {
           content: [
             {
@@ -76,79 +67,80 @@ server.tool(
         };
       }
 
-      // Get recipient and sender emails
-      const recipientEmail = await fetch(`${emailApiBaseUrl}/emails/${encodeURIComponent(person)}`);
-      const senderEmail = await fetch(`${emailApiBaseUrl}/emails/${encodeURIComponent('me')}`);
-      
-      if (!recipientEmail.ok || !senderEmail.ok) {
-        const errorData = await recipientEmail.json();
-        return {
-          content: [
-            {
-              type: "text",
-              text: `Error fetching contact emails: ${errorData.error || recipientEmail.statusText}`,
-            },
-          ],
-        };
-      }
-
-      const recipient = await recipientEmail.json();
-      const sender = await senderEmail.json();
-      
-      if (!recipient?.email || !sender?.email) {
-        return {
-          content: [
-            {
-              type: "text",
-              text: `Could not retrieve email for ${person}. Please check the contact name.`,
-            },
-          ],
-        };
-      } 
-
-      // Create and send email invitation
-      const auth = await authorize(); // Authorize Gmail
-      
-      const draft = await createDraft(auth,
-        recipient.email,
-        sender.email,
-        "Invitation to join a meeting",
-        link,
-      );
-      
-      console.log("draft created successfully", draft);
-      
-      const sendResult = await sendDraft(auth, draft.id);
-      console.log("send result for the draft", sendResult);
-      
-      if (!sendResult?.id) {
-        return {
-          content: [
-            {
-              type: "text",
-              text: `Error sending email invitation: ${sendResult.error || sendResult.statusText}`,
-            },
-          ],
-        };
-      }
-
-      // SUCCESS - Return confirmation
       return {
+        link: link,
         content: [
           {
             type: "text",
-            text: `Successfully started meeting with ${person} and sent email invitation to ${recipient.email}. Meeting link: ${link}`,
+            text: `Started your meeting with ${person}. Here is your meeting link: ${link}`,
           },
         ],
-      };
-
-    } catch (error) {
+      }
+    } catch(error){
       console.error("Error initiating your call:", error);
       return {
         content: [
           {
             type: "text",
-            text: `Failed to start meeting with ${person} and send invitation. Error: ${error.message}`,
+            text: `Failed to start meet with ${person}. Error: ${error.message}`,
+          },
+        ],
+      };
+    }
+});
+
+server.tool(
+  "get-email-of-sender-and-recipient",
+  "Get's the contact emails for the sender and recipient from api",
+  {
+    person: zod.string().describe("The name or identifier of the person to be invited to meeting. Same as the person who we started the call with."),
+  },
+  async ({person}) => {
+    try {
+      const response = await fetch(`${webrtcApiBaseUrl}/emails/${encodeURIComponent(person)}`);
+      const result = await fetch(`${webrtcApiBaseUrl}/emails/${encodeURIComponent('me')}`);
+      if (!response.ok || ! result.ok) {
+        const errorData = await response.json();
+        return {
+          content: [
+            {
+              type: "text",
+              text: `Error fetching contact emails: ${errorData.error || response.statusText}`,
+            },
+          ],
+        };
+      }
+
+      const contactData = await response.json();
+      const sender = await result.json()
+      if (contactData?.email && sender.email) {
+        return {
+          to: contactData.email,
+          from: sender.email,
+          content: [
+            {
+              type: "text",
+              text: `The email for ${contactData.name} is: ${contactData.email}. The sender email is ${sender.email}`,
+            },
+          ],
+        };
+      } else {
+        return {
+          content: [
+            {
+              type: "text",
+              text: `Could not retrieve emails.`,
+            },
+          ],
+        };
+      }
+    } catch (error) {
+      console.error("Error fetching contact email:", error);
+      return {
+        content: [
+          {
+            type: "text",
+            text: `Failed to fetch contact email: ${error.message}`,
           },
         ],
       };
@@ -156,8 +148,83 @@ server.tool(
   }
 );
 
-const emailApiBaseUrl = 'https://localhost:8181/api';
-process.env.NODE_TLS_REJECT_UNAUTHORIZED = '0';
+
+server.tool(
+      "send-email-invite",
+      "Send an email invitation for a meeting",
+      {
+        to: zod.string().describe("The email address of the recipient"),
+        from: zod.string().describe("The email address of the sender"),
+        subject: zod.string().describe("The subject line of the email invitation"),
+        body: zod.string().describe("The body of the email invitation"),
+        
+      },
+      async ({ to, from, subject, body }) => {
+        try {
+          const auth = await authorize(); // Authorize Gmail
+          console.log('gmail auth', auth, "to", to, 'from',from, 'subject', subject, 'body', body)
+          if (!auth) {
+            return {
+              content: [
+                {
+                  type: "text",
+                  text: "Failed to authorize Gmail.",
+                },
+              ],
+            };
+          }
+          if(!to || !from || !subject || !body){
+            return {
+              content: [
+                {
+                  type: "text",
+                  text: "Please provide all the required fields.",
+                },
+              ],
+            };
+          }
+          // Create and send the email draft
+          const draft = await createDraft(auth,
+            to,
+            from,
+            subject,
+            body,
+          );
+          console.log("draft created successfully", draft)
+          const sendResult = await sendDraft(auth, draft.id);
+          console.log("send result for the draft", sendResult)
+          if (sendResult?.id) {
+            return {
+              content: [
+                {
+                  type: "text",
+                  text: `Email invitation sent successfully to ${to}.`,
+                },
+              ],
+            };
+          } else {
+            return {
+              content: [
+                {
+                  type: "text",
+                  text: `Failed to send email invitation to ${to}.`,
+                },
+              ],
+            };
+          }
+        } catch (error) {
+          console.error("Error sending email invitation:", error);
+          return {
+            content: [
+              {
+                type: "text",
+                text: `Failed to send email invitation: ${error.message}`,
+              },
+            ],
+          };
+        }
+      }
+    );
 
 // Clean shutdown
 function cleanupAndExit() {
@@ -193,6 +260,7 @@ app.post('/mcp', async (req, res) => {
     transport.onclose = () => {
       if (transport.sessionId) {
         delete transports[transport.sessionId];
+        cleanupAndExit();
       }
     };
 
@@ -241,19 +309,3 @@ app.use((err, req, res, next) => {
   console.error("❌ Express error:", err.stack);
   res.status(500).send('Server Error');
 });
-
-// try{
-//   const auth = await authorize(); // Authorize Gmail
-// console.log(auth, "gmail auth")
-// const draft = await createDraft(auth,
-//   "gnaneswari.lolugu@gmail.com",
-//   "chinni.gnanam@gmail.com",
-//   "blah blah blah",
-//   "This is a test email body",
-// );
-// console.log("draft created successfully", draft)
-// const sendResult = await sendDraft(auth, draft.id);
-// console.log("send result for the draft", sendResult)
-// }catch(error){
-//   console.error(error)
-// }

@@ -138,3 +138,13 @@ async function sendDraft(auth, draftId) {
 
 
 export { authorize, listLabels, createDraft, sendDraft };
+// const auth = authorize().then((auth) => {
+//   console.log("Authorization successful");
+// createDraft(auth, "gnaneswari.lolugu@gmail.com", "chinni.gnanam@gmail.com", "test", "test").then((draft)=> sendDraft(auth, draft.id)
+//   ).then((res) => {
+//   console.log("Draft sent successfully:", res);
+// }
+// ).catch((err) => {
+//   console.error("Error sending draft:", err);
+// })
+//   });

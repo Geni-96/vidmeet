@@ -8,7 +8,6 @@ import dotenv from 'dotenv';
 import axios from 'axios';
 import FormData from 'form-data';
 import { Server } from 'socket.io';
-import { connectToServer, chatLoop, cleanup } from './my_mcp_client.js';
 import contacts from "./test-emails.js";
 // Required for __dirname in ESM
 const __filename = fileURLToPath(import.meta.url);
@@ -44,20 +43,6 @@ app.post('/api/startCall', (req,res)=>{
 app.get('/api/link',(req,res)=>{
     res.json({ success: true, link: `https://localhost:8181?offererUserName=${username}`});
 })
-app.post('/api/handle-command', async (req, res) => {
-  const { command } = req.body;
-    console.log('received voice command from frontend')
-  try {
-    await connectToServer('./my_mcp_server.js'); // Connect MCP client
-    console.log("connected to mcp server")
-    const result = await chatLoop(command); // Pass command to LLM
-
-    res.json({ success: true, message: result });
-  } catch (err) {
-    console.error("Error:", err);
-    res.status(500).json({ success: false, message: "LLM call failed" });
-  }
-});
 
 app.get('/api/emails/:name', (req, res) => {
   const nameParam = req.params.name.toLowerCase();
