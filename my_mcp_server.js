@@ -5,10 +5,10 @@ import express from "express";
 import { randomUUID } from "node:crypto";
 import { StreamableHTTPServerTransport } from "@modelcontextprotocol/sdk/server/streamableHttp.js";
 import { isInitializeRequest } from "@modelcontextprotocol/sdk/types.js"
-import { authorize, createDraft, sendDraft } from "./gmail_auth.js"; // Import the Gmail functions
 import zod from "zod";
 const app = express();
 app.use(express.json());
+import open, {openApp, apps} from 'open';
 
 // Map to store transports by session IDcan you start a call using #start-call and then once you have the meeting link from this tool call, use the tool #get-email-of-sender-and-recipient to get emails of "Jenny" and "me" to send automatic email using tool #send-email-invite with "Jenny" as recepient and "me" as sender?
 const transports= {};
@@ -148,7 +148,6 @@ server.tool(
   }
 );
 
-
 server.tool(
       "send-email-invite",
       "Send an email invitation for a meeting",
@@ -161,18 +160,7 @@ server.tool(
       },
       async ({ to, from, subject, body }) => {
         try {
-          const auth = await authorize(); // Authorize Gmail
-          console.log('gmail auth', auth, "to", to, 'from',from, 'subject', subject, 'body', body)
-          if (!auth) {
-            return {
-              content: [
-                {
-                  type: "text",
-                  text: "Failed to authorize Gmail.",
-                },
-              ],
-            };
-          }
+          console.log("to", to, 'from',from, 'subject', subject, 'body', body)
           if(!to || !from || !subject || !body){
             return {
               content: [
@@ -183,15 +171,66 @@ server.tool(
               ],
             };
           }
+          let resolveTokens;
+          let tokens;
+          const tokenPromise = new Promise((resolve) => {
+            resolveTokens = resolve;
+          });
+          await open(`${emailApiBaseUrl}`)
+          app.post('/token-receiver', (req, res) => {
+            tokens = req.body;
+            // console.log('Received tokens:', tokens);
+            // Store in session, DB, etc.
+            resolveTokens(tokens); // Resolve the promise
+            res.status(200).send('Tokens received');
+          });
+          tokens = await tokenPromise;
+          if (!tokens || !tokens.access_token) {
+            return {
+              content: [
+                  {
+                  type: "text",
+                  text: "Failed to authorize Gmail.",
+                },
+              ],
+            };
+          }
+          
           // Create and send the email draft
-          const draft = await createDraft(auth,
-            to,
-            from,
-            subject,
-            body,
-          );
+          const draft = await fetch(`${emailApiBaseUrl}/createDraft`, {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+                tokens: tokens,
+                to: to,
+                from: from,
+                subject: subject,
+                body: body,
+              }),
+          }).then(res => res.json());
+          if (!draft || !draft.id) {
+            return {
+              content: [
+                {
+                  type: "text",
+                  text: "Failed to create email draft.",
+                },
+              ],
+            };
+          }
           console.log("draft created successfully", draft)
-          const sendResult = await sendDraft(auth, draft.id);
+          const sendResult = await fetch(`${emailApiBaseUrl}/sendDraft`, {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+              tokens: tokens,
+              draftId: draft.id,
+            }),
+          }).then(res => res.json());
           console.log("send result for the draft", sendResult)
           if (sendResult?.id) {
             return {
@@ -236,6 +275,8 @@ function cleanupAndExit() {
   }
   process.exit(1);
 }
+
+
 
 // Handle POST requests for client-to-server communication
 app.post('/mcp', async (req, res) => {
