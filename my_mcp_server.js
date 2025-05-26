@@ -8,7 +8,7 @@ import { isInitializeRequest } from "@modelcontextprotocol/sdk/types.js"
 import zod from "zod";
 const app = express();
 app.use(express.json());
-import open, {openApp, apps} from 'open';
+import open from 'open';
 
 // Map to store transports by session IDcan you start a call using #start-call and then once you have the meeting link from this tool call, use the tool #get-email-of-sender-and-recipient to get emails of "Jenny" and "me" to send automatic email using tool #send-email-invite with "Jenny" as recepient and "me" as sender?
 const transports= {};
