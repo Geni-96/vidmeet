@@ -1,0 +1,7 @@
+{
+    "servers": {
+        "my-mcp-server-7bd97696": {
+            "url": "http://localhost:3000/mcp"
+        }
+    }
+}
