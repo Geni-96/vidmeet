@@ -200,12 +200,12 @@ const createPeerConnection = (offerObj)=>{
             const audioOnlyStream = new MediaStream(localStream.getAudioTracks());
             mediaRecorderLocal = new MediaRecorder(audioOnlyStream, { mimeType: 'audio/webm;codecs=opus' });
             try{
-                mediaRecorderLocal.start(1000); // Start recording with 1-second chunks
+                mediaRecorderLocal.start(5000); // Start recording with 1-second chunks
                 console.log("recording audio")
                 mediaRecorderLocal.ondataavailable = async(event) => {
                     const blob = new Blob([event.data], { type: event.data.type }); // Blob object containing the audio data
                     // Process the audioChunk (e.g., send to server)
-                    socket.emit("audioChunks",blob, event.data.type)
+                    socket.emit("audioChunks",blob); 
                 };
             }catch(err){
                 console.error('failed to start audio recorder',err)

@@ -6,13 +6,14 @@ const redis = require('redis');
 app.use(express.static(__dirname))
 const fs = require('fs');
 require('dotenv').config();
-const wav = require('wav');
+const meteorRandom = require('meteor-random');
+// let sessionId = meteorRandom.id(); // Generate a unique session ID
+let sessionId = 'Jjwjg6gouWLXhMGKW'
 // const express = require('express');
 // const multer = require('multer');
 const axios = require('axios');
 const FormData = require('form-data');
-const { Readable } = require('stream');
-let sessionId = 'Jjwjg6gouWLXhMGKW';
+
 
 const key = fs.readFileSync('cert.key');
 const cert = fs.readFileSync('cert.crt');
@@ -177,50 +178,49 @@ io.on('connection',async(socket)=>{
     });
     
     //processing audio chunks
+    let index = 0;
+    let isProcessing = false;
     socket.on("audioChunks", async(audioChunk)=>{
-        console.log(audioChunk, typeof audioChunk)
-        const blob = new Blob([audioChunk], { type: 'audio/webm; codecs=opus' });
+        if (isProcessing) {
+            console.log("Still processing previous chunk, skipping this one.");
+            return;
+        }
+
+        isProcessing = true;
+        // console.log(audioChunk, typeof audioChunk)
+        // const blob = new Blob([audioChunk], { type: 'audio/webm; codecs=opus' });
         // console.log(audioBuffer, typeof audioBuffer)
         const formData = new FormData();
         const uniqueId = Math.random().toString(36).substring(2, 15)+Math.random().toString(36).substring(2, 15)
-        console.log('received audio chunk from frontend', audioChunk)
-        console.log(audioChunk instanceof Buffer); // Log the audio chunk
-        formData.append('index', Date.now()); // Example timestamp
-        formData.append('clientSecret', process.env.OZWELL_SECRET)
+        // console.log('received audio chunk from frontend', audioChunk)
+        // console.log(audioChunk instanceof Buffer); // Log the audio chunk
+        
+        formData.append('index', index ); // Example timestamp
         formData.append('type','audio/webm;codecs=opus')
         formData.append('sessionId', sessionId);
         formData.append('audioId', uniqueId)
-        // Convert the Buffer to a WAV file
-            const wavWriter = new wav.Writer({
-                channels: 1,  // Mono audio
-                sampleRate: 48000, // Or whatever your sample rate is
-                bitDepth: 16    // Or 8, 24, etc.
-            });
-
-            // Create a Readable stream from the Buffer and pipe it through the WAV encoder
-            const audioStream = Readable.from(audioChunk).pipe(wavWriter);
-
-
-            formData.append('data', audioStream, {
-                filename: 'audio_chunk.wav', // Change filename to .wav
-                contentType: 'audio/wav'
-            });
+        formData.append('data', audioChunk, `chunk-${index}`);
+        console.log(index, sessionId, uniqueId, audioChunk, formData.getHeaders())
         try{
+            console.log('sending audio chunk to Bluehive AI', formData)
             const response = await axios.post(
             'https://ai.bluehive.com/api/consume-audio',
             formData,
             {
-            timeout: 60000,
-            timeoutErrorMessage: '60 second timeout sending audio chunk to Bluehive AI, check your internet connection and try again.',
             headers: {
                 'x-bluehive-authorization': 'FBoYfOkX35nT1Uv3XAinrIPbYGBzZGYQPQc2BUjC8lY',
+                'Origin': 'https://localhost:8181',
                 ...formData.getHeaders()
                 },
             })
             console.log(response.data);
-            sessionId = response.data.sessionId;
+            // sessionId = response.data.sessionId;
+            index++;
         }catch(err){
             console.error('Error sending audio chunks to ozwell', err)
+        }
+        finally{
+            isProcessing = false;
         }
     })
 })
