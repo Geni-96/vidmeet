@@ -7,8 +7,8 @@ app.use(express.static(__dirname))
 const fs = require('fs');
 require('dotenv').config();
 const meteorRandom = require('meteor-random');
-// let sessionId = meteorRandom.id(); // Generate a unique session ID
-let sessionId = 'Jjwjg6gouWLXhMGKW'
+let sessionId = meteorRandom.id(); // Generate a unique session ID
+// let sessionId = 'Jjwjg6gouWLXhMGKW'
 // const express = require('express');
 // const multer = require('multer');
 const axios = require('axios');
@@ -187,13 +187,8 @@ io.on('connection',async(socket)=>{
         }
 
         isProcessing = true;
-        // console.log(audioChunk, typeof audioChunk)
-        // const blob = new Blob([audioChunk], { type: 'audio/webm; codecs=opus' });
-        // console.log(audioBuffer, typeof audioBuffer)
         const formData = new FormData();
         const uniqueId = Math.random().toString(36).substring(2, 15)+Math.random().toString(36).substring(2, 15)
-        // console.log('received audio chunk from frontend', audioChunk)
-        // console.log(audioChunk instanceof Buffer); // Log the audio chunk
         
         formData.append('index', index ); // Example timestamp
         formData.append('type','audio/webm;codecs=opus')
@@ -214,7 +209,6 @@ io.on('connection',async(socket)=>{
                 },
             })
             console.log(response.data);
-            // sessionId = response.data.sessionId;
             index++;
         }catch(err){
             console.error('Error sending audio chunks to ozwell', err)
