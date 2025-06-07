@@ -7,10 +7,8 @@ app.use(express.static(__dirname))
 const fs = require('fs');
 require('dotenv').config();
 const meteorRandom = require('meteor-random');
-let sessionId = meteorRandom.id(); // Generate a unique session ID
-// let sessionId = 'Jjwjg6gouWLXhMGKW'
-// const express = require('express');
-// const multer = require('multer');
+// let sessionId = meteorRandom.id(); // Generate a unique session ID
+let sessionId = 'Jjwjg6gouWLXhMGKW' //static session ID for testing
 const axios = require('axios');
 const FormData = require('form-data');
 
@@ -180,7 +178,23 @@ io.on('connection',async(socket)=>{
     //processing audio chunks
     let index = 0;
     let isProcessing = false;
+    const uniqueId = Math.random().toString(36).substring(2, 15)+Math.random().toString(36).substring(2, 15)
     socket.on("audioChunks", async(audioChunk)=>{
+        console.log("Received audio chunk");
+        // Only handle Buffer (socket.io will send as Buffer from Node.js client, or as {type: 'Buffer', data: ...} from some clients)
+        let buf;
+        if (Buffer.isBuffer(audioChunk)) {
+            buf = audioChunk;
+        } else if (audioChunk && audioChunk.type === 'Buffer' && Array.isArray(audioChunk.data)) {
+            buf = Buffer.from(audioChunk.data);
+        } else {
+            console.log("Unknown audioChunk type, skipping.");
+            return;
+        }
+        if (buf.length === 0) {
+            console.log("Skipping empty audio chunk.");
+            return;
+        }
         if (isProcessing) {
             console.log("Still processing previous chunk, skipping this one.");
             return;
@@ -188,14 +202,12 @@ io.on('connection',async(socket)=>{
 
         isProcessing = true;
         const formData = new FormData();
-        const uniqueId = Math.random().toString(36).substring(2, 15)+Math.random().toString(36).substring(2, 15)
-        
-        formData.append('index', index ); // Example timestamp
+        formData.append('index', index );
         formData.append('type','audio/webm;codecs=opus')
         formData.append('sessionId', sessionId);
         formData.append('audioId', uniqueId)
-        formData.append('data', audioChunk, `chunk-${index}`);
-        console.log(index, sessionId, uniqueId, audioChunk, formData.getHeaders())
+        formData.append('data', buf, `chunk-${index}`);
+        console.log(index, sessionId, uniqueId, buf, formData.getHeaders())
         try{
             console.log('sending audio chunk to Bluehive AI', formData)
             const response = await axios.post(
