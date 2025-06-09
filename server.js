@@ -6,9 +6,13 @@ const redis = require('redis');
 app.use(express.static(__dirname))
 const fs = require('fs');
 require('dotenv').config();
-// const express = require('express');
-// const multer = require('multer');
+const meteorRandom = require('meteor-random');
+// let sessionId = meteorRandom.id(); // Generate a unique session ID
+let sessionId = 'Jjwjg6gouWLXhMGKW' //static session ID for testing
 const axios = require('axios');
+const FormData = require('form-data');
+const { type } = require('os');
+
 
 const key = fs.readFileSync('cert.key');
 const cert = fs.readFileSync('cert.crt');
@@ -173,25 +177,58 @@ io.on('connection',async(socket)=>{
     });
     
     //processing audio chunks
-    // socket.on("audioChunks",audioChunk =>{
-    //     console.log('received audio chunk from frontend')
-    //     axios.post(
-    //         'https://ai.bluehive.com/api/consume-audio',
-    //         {
-    //         audioChunk
-    //         },
-    //         {
-    //         headers: {
-    //             'Authorization': `Bearer ${process.env.OZWELL_SECRET}`,
-    //             'Content-Type': 'audio/webm;codecs=opus'
-    //         }
-    //         }
-    //     )
-    //     .then(response => {
-    //         console.log(response.data);
-    //     })
-    //     .catch(error => {
-    //         console.error(error);
-    //     });
-    // })
+    let index = 0;
+    let isProcessing = false;
+    const uniqueId = Math.random().toString(36).substring(2, 15)+Math.random().toString(36).substring(2, 15)
+    socket.on("audioChunks", async(audioChunk)=>{
+        console.log("Received audio chunk", typeof audioChunk, audioChunk);
+        // Only handle Buffer (socket.io will send as Buffer from Node.js client, or as {type: 'Buffer', data: ...} from some clients)
+        let buf;
+        if (Buffer.isBuffer(audioChunk)) {
+            buf = audioChunk;
+        } else if (audioChunk && audioChunk.type === 'Buffer' && Array.isArray(audioChunk.data)) {
+            buf = Buffer.from(audioChunk.data);
+        } else {
+            console.log("Unknown audioChunk type, skipping.");
+            return;
+        }
+        if (buf.length === 0) {
+            console.log("Skipping empty audio chunk.");
+            return;
+        }
+        if (isProcessing) {
+            console.log("Still processing previous chunk, skipping this one.");
+            return;
+        }
+
+        isProcessing = true;
+        const formData = new FormData();
+        formData.append('index', index );
+        formData.append('type','audio/webm;codecs=opus')
+        formData.append('sessionId', sessionId);
+        formData.append('audioId', uniqueId)
+        formData.append('data', buf, `chunk-${index}`);
+        console.log(index, sessionId, uniqueId, buf, formData.getHeaders())
+        try{
+            console.log('sending audio chunk to Bluehive AI', formData)
+            const response = await axios.post(
+            'https://ai.bluehive.com/api/consume-audio',
+            formData,
+            {
+            headers: {
+                'x-bluehive-authorization': 'FBoYfOkX35nT1Uv3XAinrIPbYGBzZGYQPQc2BUjC8lY',
+                'Origin': 'https://localhost:8181',
+                ...formData.getHeaders()
+                },
+            })
+            console.log(response.data);
+            index++;
+            // callback(`Audio chunk ${index} sent successfully.`);
+        }catch(err){
+            console.error('Error sending audio chunks to ozwell', err)
+        }
+        finally{
+            isProcessing = false;
+        }
+    })
 })

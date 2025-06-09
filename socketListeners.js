@@ -1,4 +1,5 @@
 //Answerer side
+import { socket, answerOffer, addAnswer, addNewIceCandidate } from './scripts.js';
 const createCallBtn = document.querySelector('#call')
 const answerSection = document.querySelector('#answerSection')
 const answerBtn = document.querySelector('#answer-button')

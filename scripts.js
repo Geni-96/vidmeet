@@ -1,9 +1,9 @@
+import { io } from "https://cdn.socket.io/4.7.5/socket.io.esm.min.js";
+import SmartVoiceRecorder from './SmartVoiceRecorder.js'
 const userName = Math.floor(Math.random() * 100000)
 let isAudioMuted = false
 let isVideoOn = true
 console.log(userName,'username')
-let mediaRecorderLocal;
-let mediaRecorderRemote;
 //if trying it on a phone, use this instead...
 // const socket = io.connect('https://LOCAL-DEV-IP-HERE:8181/',{
 const socket = io.connect('https://localhost:8181/',{
@@ -11,7 +11,6 @@ const socket = io.connect('https://localhost:8181/',{
         userName
     }
 })
-
 const localVideoEl = document.querySelector('#local-video');
 const remoteVideoEl = document.querySelector('#remote-video');
 const clipboardEle = document.querySelector('#clipboard')
@@ -144,6 +143,8 @@ const fetchUserMedia = ()=>{
     })
 }
 
+let recordingsInterval = null;
+
 const createPeerConnection = (offerObj)=>{
     return new Promise(async(resolve, reject)=>{
         //RTCPeerConnection is the thing that creates the connection
@@ -197,21 +198,29 @@ const createPeerConnection = (offerObj)=>{
             document.getElementById("loading-overlay").classList.add("hidden")
             document.getElementById("main-content").classList.remove("blur-xl") 
             await peerConnection.setRemoteDescription(offerObj.offer)
-            // const audioOnlyStream = new MediaStream(localStream.getAudioTracks());
-            // mediaRecorderLocal = new MediaRecorder(audioOnlyStream, { mimeType: 'audio/webm' });
-            // try{
-            //     mediaRecorderLocal.start(1000); // Start recording with 1-second chunks
-            //     console.log("recording audio")
-            //     mediaRecorderLocal.ondataavailable = (event) => {
-            //         const audioChunk = event.data; // Blob object containing the audio data
-            //         // Process the audioChunk (e.g., send to server)
-            //         console.log('Received audio chunk:', audioChunk);
-            //         socket.emit("audioChunks",audioChunk)
-            //     };
-            // }catch(err){
-            //     console.error('failed to start audio recorder',err)
-            // }
-            
+            const audioOnlyStream = new MediaStream(localStream.getAudioTracks());
+            try{
+                const recorder = new SmartVoiceRecorder(audioOnlyStream)
+                console.log("Creating audio recorder")
+                recorder.startMonitoring();
+                console.log("Audio recorder started")
+                // Start polling for DB recordings every 10 seconds
+                if (recordingsInterval) clearInterval(recordingsInterval);
+                recordingsInterval = setInterval(async() => {
+                    const chunks = await recorder.getRecordings()
+                    const blob = new Blob(chunks, { type: 'audio/webm;codecs=opus' })
+                    for (const chunk of chunks){
+                        recorder.deleteRecording(chunk.id)
+                        console.log("Deleted recording with ID:", chunk);
+                    }
+                    socket.emit('audioChunks', blob);
+                    
+                }, 1000); // 1 seconds
+                
+            }catch(err){
+                console.error('Something went wrong in processing audioChunks',err)
+            }
+
             // console.log(peerConnection.signalingState) //should be have-remote-offer, because client2 has setRemoteDesc on the offer
         }
         resolve();
@@ -287,6 +296,10 @@ function cleanupCall() {
         peerConnection = null;
         mediaRecorder.stop()
     }
-    
+    if (recordingsInterval) {
+        clearInterval(recordingsInterval);
+        recordingsInterval = null;
+    }
 }
 
+export { addAnswer, addNewIceCandidate, answerOffer, socket, userName };
