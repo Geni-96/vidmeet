@@ -11,6 +11,7 @@ const meteorRandom = require('meteor-random');
 let sessionId = 'Jjwjg6gouWLXhMGKW' //static session ID for testing
 const axios = require('axios');
 const FormData = require('form-data');
+const { type } = require('os');
 
 
 const key = fs.readFileSync('cert.key');
@@ -180,7 +181,7 @@ io.on('connection',async(socket)=>{
     let isProcessing = false;
     const uniqueId = Math.random().toString(36).substring(2, 15)+Math.random().toString(36).substring(2, 15)
     socket.on("audioChunks", async(audioChunk)=>{
-        console.log("Received audio chunk");
+        console.log("Received audio chunk", typeof audioChunk, audioChunk);
         // Only handle Buffer (socket.io will send as Buffer from Node.js client, or as {type: 'Buffer', data: ...} from some clients)
         let buf;
         if (Buffer.isBuffer(audioChunk)) {
@@ -222,6 +223,7 @@ io.on('connection',async(socket)=>{
             })
             console.log(response.data);
             index++;
+            // callback(`Audio chunk ${index} sent successfully.`);
         }catch(err){
             console.error('Error sending audio chunks to ozwell', err)
         }

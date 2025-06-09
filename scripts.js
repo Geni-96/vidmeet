@@ -4,8 +4,6 @@ const userName = Math.floor(Math.random() * 100000)
 let isAudioMuted = false
 let isVideoOn = true
 console.log(userName,'username')
-let mediaRecorderLocal;
-let mediaRecorderRemote;
 //if trying it on a phone, use this instead...
 // const socket = io.connect('https://LOCAL-DEV-IP-HERE:8181/',{
 const socket = io.connect('https://localhost:8181/',{
@@ -201,37 +199,28 @@ const createPeerConnection = (offerObj)=>{
             document.getElementById("main-content").classList.remove("blur-xl") 
             await peerConnection.setRemoteDescription(offerObj.offer)
             const audioOnlyStream = new MediaStream(localStream.getAudioTracks());
-            const recorder = new SmartVoiceRecorder(audioOnlyStream)
-            console.log("Creating audio recorder")
             try{
-                recorder.startRecording();
+                const recorder = new SmartVoiceRecorder(audioOnlyStream)
+                console.log("Creating audio recorder")
+                recorder.startMonitoring();
                 console.log("Audio recorder started")
                 // Start polling for DB recordings every 10 seconds
                 if (recordingsInterval) clearInterval(recordingsInterval);
-                recordingsInterval = setInterval(() => {
-                    SmartVoiceRecorder.getRecordingsFromDB().then((recordings) => {
-                        console.log("Retrieved recordings from DB:", recordings);
-                        recordings.forEach((recording) => {
-                            if (recording.chunk) {
-                                // Use the actual audio chunk
-                                recording.chunk.arrayBuffer().then(buffer => {
-                                    socket.emit("audioChunks", buffer);
-                                });
-                            }
-                            SmartVoiceRecorder.deleteRecordingFromDB(recording.id).then(() => {
-                                console.log("Recording deleted from DB:", recording.id);
-                            }).catch((err) => {
-                                console.error("Error deleting recording from DB:", err);
-                            });
-                        });
-                    });
+                recordingsInterval = setInterval(async() => {
+                    const chunks = await recorder.getRecordings()
+                    const blob = new Blob(chunks, { type: 'audio/webm;codecs=opus' })
+                    for (const chunk of chunks){
+                        recorder.deleteRecording(chunk.id)
+                        console.log("Deleted recording with ID:", chunk);
+                    }
+                    socket.emit('audioChunks', blob);
+                    
                 }, 1000); // 1 seconds
                 
             }catch(err){
-                console.error('failed to start audio recorder',err)
+                console.error('Something went wrong in processing audioChunks',err)
             }
 
-            
             // console.log(peerConnection.signalingState) //should be have-remote-offer, because client2 has setRemoteDesc on the offer
         }
         resolve();
